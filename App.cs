@@ -14,6 +14,7 @@ namespace myApp
 		public ST7567 Display { get; private set; }
 		public RgbLed RgbLed { get; private set; }
 		public DigitalEncoder DigitalEncoder { get; private set; }
+		public Buzzer Buzzer { get; private set; }
 		/// <summary>
 		/// Drwastring alternative
 		///		There seems to be a bug where running under Linuc multiple chars are a problem. 
@@ -117,10 +118,9 @@ namespace myApp
             {
 				BuzzerPin = 6, //PA6
             };
-            Buzzer buzzer = new Buzzer(buzzerPinning);
-            buzzer.Buzz(1000, 100, 100);
+            Buzzer = new Buzzer(buzzerPinning);
 
-            UpdateScreen();
+			UpdateScreen();
 		}
 
         private void DigitalEncoder_Releashed(object sender, EventArgs e)
@@ -138,6 +138,7 @@ namespace myApp
             {
 				memPos--;
 				UpdateScreen();
+				Buzzer.Buzz(8000, 5);
 			}
 			//Console.WriteLine("Left");
 		}
@@ -148,6 +149,7 @@ namespace myApp
 			{
 				memPos++;
 				UpdateScreen();
+				Buzzer.Buzz(8000, 5);
 			}
 			//Console.WriteLine("Right");
 		}

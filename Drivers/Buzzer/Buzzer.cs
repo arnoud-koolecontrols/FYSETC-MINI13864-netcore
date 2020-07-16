@@ -34,19 +34,13 @@ namespace Drivers.Buzzer
 				} else
                 {
 					Pwm = new SoftwarePwmChannel(Pinning.BuzzerPin, 1000, 0.5, true);
-				}	
+				}
 			}
 		}
 
-		public void Buzz(int frequency, double volume, int ms)
+		public void Buzz(int frequency, int ms)
         {
 			Pwm.Frequency = frequency;
-			if (volume>0.5)
-            {
-				volume = 0.5;
-            }
-			
-			Pwm.DutyCycle = volume;
 			Pwm.Start();
 			Thread.Sleep(ms);
 			Pwm.Stop();
