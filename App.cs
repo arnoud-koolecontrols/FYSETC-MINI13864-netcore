@@ -2,6 +2,7 @@
 using Drivers.Display;
 using Drivers.LED;
 using myApp.Drivers.Encoder;
+using myApp.Drivers.Mifare;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -11,6 +12,7 @@ namespace myApp
 {
     public class App
     {
+		public PN5180 Mifare { get; private set; }
 		public ST7567 Display { get; private set; }
 		public RgbLed RgbLed { get; private set; }
 		public DigitalEncoder DigitalEncoder { get; private set; }
@@ -87,14 +89,25 @@ namespace myApp
         {
 			ST7567.ST7567Pinning displayPinning = new ST7567.ST7567Pinning()
 			{
-				RST = 13,
+				RST = 2,
 				A0 = 7,
-				CS = 1, //note this is not the pin but the /dev/spi1.x
+				CS = 0, //note this is not the pin but the /dev/spi1.x
 				SpiBus = 1,
 			};
 			Display = new ST7567(displayPinning, 128, 64);
 
-			RgbLed.RgbLedPinning rgbLedPinning = new RgbLed.RgbLedPinning()
+            PN5180.PN5180Pinning pn5180Pinning = new PN5180.PN5180Pinning()
+            {
+                RST = 19,
+                BUSY = 18,
+                NSS = 10,
+                //IRQ = 18,
+                CS = 1, //note this is not the pin but the /dev/spi1.x
+                SpiBus = 1,
+            };
+            Mifare = new PN5180(pn5180Pinning);
+
+            RgbLed.RgbLedPinning rgbLedPinning = new RgbLed.RgbLedPinning()
 			{
 				Red = 0,
 				Green = 1,
@@ -104,7 +117,7 @@ namespace myApp
 
 			DigitalEncoder.DigitalEncoderPinning digitalEncoderPinning = new DigitalEncoder.DigitalEncoderPinning()
 			{
-				Enc0 = 2,
+				Enc0 = 12,
 				Enc1 = 198,
 				Enc2 = 199
 			};

@@ -1,7 +1,5 @@
-﻿using System.Device.Gpio;
-using System.Device.Pwm;
+﻿using System.Device.Pwm;
 using System.Device.Pwm.Drivers;
-using System.Drawing;
 using System.Threading;
 
 namespace Drivers.Buzzer
