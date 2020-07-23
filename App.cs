@@ -51,50 +51,53 @@ namespace myApp
 
 		public void UpdateScreen()
         {
-			using (Graphics g = Graphics.FromImage(Display.Screen.Canvas))
-			{
-				Font font = new Font("Calibri", 8, FontStyle.Regular, GraphicsUnit.Pixel);
-				Pen pen = new Pen(Color.Black);
-				CreateMainScreen(g);
-
-				g.DrawLine(pen, 0, 0, 128, 64);
-				g.DrawLine(pen, 0, 64, 128, 0);
-				if (this.pushed)
+			if (Display != null)
+            {
+				using (Graphics g = Graphics.FromImage(Display.Screen.Canvas))
 				{
-					g.FillEllipse(Brushes.Black, 49, 17, 30, 30);
-				}
-				else
-				{
-					g.DrawEllipse(pen, 49, 17, 30, 30);
-				}
-				switch (this.memPos)
-                {
-					case 0:
-						g.FillPie(pen.Brush, 30, 44, 24, 24, -30, 60);
-						break;
+					Font font = new Font("Calibri", 8, FontStyle.Regular, GraphicsUnit.Pixel);
+					Pen pen = new Pen(Color.Black);
+					CreateMainScreen(g);
 
-					case 1:
-						g.FillRectangle(pen.Brush, 58, 50, 12, 12);
-						break;
+					g.DrawLine(pen, 0, 0, 128, 64);
+					g.DrawLine(pen, 0, 64, 128, 0);
+					if (this.pushed)
+					{
+						g.FillEllipse(Brushes.Black, 49, 17, 30, 30);
+					}
+					else
+					{
+						g.DrawEllipse(pen, 49, 17, 30, 30);
+					}
+					switch (this.memPos)
+					{
+						case 0:
+							g.FillPie(pen.Brush, 30, 44, 24, 24, -30, 60);
+							break;
 
-					case 2:
-						g.FillPie(pen.Brush, 74, 44, 24, 24, 150, 60);
-						break;
+						case 1:
+							g.FillRectangle(pen.Brush, 58, 50, 12, 12);
+							break;
+
+						case 2:
+							g.FillPie(pen.Brush, 74, 44, 24, 24, 150, 60);
+							break;
+					}
 				}
+				Display.Screen.FlushBitmapToBuffer();   //after editing we flush the picture to a display buffer	
 			}
-			Display.Screen.FlushBitmapToBuffer();   //after editing we flush the picture to a display buffer	
 		}
 
 		public App()
         {
-			ST7567.ST7567Pinning displayPinning = new ST7567.ST7567Pinning()
-			{
-				RST = 2,
-				A0 = 7,
-				CS = 0, //note this is not the pin but the /dev/spi1.x
-				SpiBus = 1,
-			};
-			Display = new ST7567(displayPinning, 128, 64);
+            ST7567.ST7567Pinning displayPinning = new ST7567.ST7567Pinning()
+            {
+                RST = 2,
+                A0 = 7,
+                CS = 0, //note this is not the pin but the /dev/spi1.x
+                SpiBus = 1,
+            };
+            Display = new ST7567(displayPinning, 128, 64);
 
             PN5180.PN5180Pinning pn5180Pinning = new PN5180.PN5180Pinning()
             {

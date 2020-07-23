@@ -1,4 +1,5 @@
-﻿using Iot.Device.Pn5180;
+﻿using Iot.Device.Pn5180V2;
+using Iot.Device.Rfid;
 using System;
 using System.Collections.Generic;
 using System.Device.Gpio;
@@ -26,7 +27,7 @@ namespace myApp.Drivers.Mifare
 			}
 		}
 
-		private Iot.Device.Pn5180.Pn5180 Chip { get; set; } = null;
+		private Pn5180 Chip { get; set; } = null;
 		private PN5180.PN5180Pinning Pinning { get; set; } = new PN5180.PN5180Pinning();
 		private GpioController IoController { get; set; } = null;
 
@@ -50,14 +51,15 @@ namespace myApp.Drivers.Mifare
                     this.IoController.OpenPin(this.Pinning.IRQ, PinMode.Input);
                 }
                 SpiConnectionSettings settings = new SpiConnectionSettings(this.Pinning.SpiBus, this.Pinning.CS);
-                settings.ClockFrequency = Pn5180.MaximumSpiClockFrequency;
+				settings.ClockFrequency = 2000000;//Pn5180.MaximumSpiClockFrequency;
                 settings.Mode = Pn5180.DefaultSpiMode;
                 settings.ChipSelectLineActiveState = PinValue.Low;
                 settings.DataFlow = DataFlow.MsbFirst;
                 settings.DataBitLength = 8;
                 this.Pinning.InitSPI(settings);
 				HwReset();
-				Chip = new Iot.Device.Pn5180.Pn5180(Pinning.SPI, Pinning.BUSY, Pinning.NSS, IoController, true, Iot.Device.Card.LogLevel.Debug);
+				Chip = new Iot.Device.Pn5180V2.Pn5180(Pinning.SPI, Pinning.BUSY, Pinning.NSS,null,true,Iot.Device.Card.LogLevel.Debug);
+				Chip.LogTo = Iot.Device.Card.LogTo.Console;
 			}
 		}
 
@@ -68,11 +70,11 @@ namespace myApp.Drivers.Mifare
 				if (this.Pinning.RST > -1)
 				{
 					this.IoController.Write(this.Pinning.RST, PinValue.High);
-					Thread.Sleep(5);
+					Thread.Sleep(50);
 					this.IoController.Write(this.Pinning.RST, PinValue.Low);
-					Thread.Sleep(10);
+					Thread.Sleep(50);
 					this.IoController.Write(this.Pinning.RST, PinValue.High);
-					Thread.Sleep(10);
+					Thread.Sleep(100);
 					//this.IoController.Write(this.Pinning.RST, PinValue.Low);
 					//Thread.Sleep(5);
 				}
@@ -88,6 +90,23 @@ namespace myApp.Drivers.Mifare
 				Console.WriteLine("firmware: " + firmware.ToString());
 				Console.WriteLine("eeprom: " + eeprom.ToString());
 			}
+		}
+
+		public void ScanForISO14443TypeADevices()
+        {
+			Console.WriteLine("start");
+			Data106kbpsTypeA cardTypeA;
+			// This will try to select the card for 1 second and will wait 300 milliseconds before trying again if none is found
+			var retok = Chip.ListenToCardIso14443TypeA(TransmitterRadioFrequencyConfiguration.Iso14443A_Nfc_PI_106_106, ReceiverRadioFrequencyConfiguration.Iso14443A_Nfc_PI_106_106, out cardTypeA, 1000);
+			if (retok)
+			{
+				Console.WriteLine($"ISO 14443 Type A found:");
+				Console.WriteLine($"  ATQA: {cardTypeA.Atqa}");
+				Console.WriteLine($"  SAK: {cardTypeA.Sak}");
+				Console.WriteLine($"  UID: {BitConverter.ToString(cardTypeA.NfcId)}");
+				// This is where you do something with the card
+			}
+
 		}
 	}
 }

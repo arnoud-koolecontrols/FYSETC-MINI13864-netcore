@@ -1,6 +1,7 @@
 ﻿using Drivers.Buzzer;
 using Drivers.Display;
 using Drivers.LED;
+using Iot.Device.Pn5180;
 using myApp.Drivers.Encoder;
 using System;
 using System.Drawing;
@@ -14,14 +15,14 @@ namespace myApp
         {
 			App app = new App();
 
-			int switchTime = 1000;
+			
             while (true) {
 				app.RgbLed.SetColor(Color.Green);
-				Thread.Sleep (switchTime);
+				app.Mifare.ScanForISO14443TypeADevices();
 				app.RgbLed.SetColor(Color.Blue);
-				Thread.Sleep (switchTime);
+				app.Mifare.ScanForISO14443TypeADevices(); 
 				app.RgbLed.SetColor(Color.Red);
-				Thread.Sleep(switchTime);
+				app.Mifare.ScanForISO14443TypeADevices();
 			}
         }
 
