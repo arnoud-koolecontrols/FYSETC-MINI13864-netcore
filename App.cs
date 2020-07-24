@@ -90,13 +90,16 @@ namespace myApp
 
 		public App()
         {
+			object spiLock = new object(); //two devices on one spi bus, needs a lockObject
+
             ST7567.ST7567Pinning displayPinning = new ST7567.ST7567Pinning()
             {
                 RST = 2,
                 A0 = 7,
                 CS = 0, //note this is not the pin but the /dev/spi1.x
                 SpiBus = 1,
-            };
+				SpiLock = spiLock,
+			};
             Display = new ST7567(displayPinning, 128, 64);
 
             PN5180.PN5180Pinning pn5180Pinning = new PN5180.PN5180Pinning()
@@ -107,6 +110,7 @@ namespace myApp
                 //IRQ = 18,
                 CS = 1, //note this is not the pin but the /dev/spi1.x
                 SpiBus = 1,
+				SpiLock = spiLock,
             };
             Mifare = new PN5180(pn5180Pinning);
 
@@ -143,6 +147,7 @@ namespace myApp
         {
 			pushed = false;
 			UpdateScreen();
+			this.Mifare.Hold = false;
 		}
 
 		int memPos = 1;			//do we need locking? 

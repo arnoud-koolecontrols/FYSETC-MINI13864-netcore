@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Iot.Device.Bno055;
 using Iot.Device.Card;
 using Iot.Device.Card.Mifare;
 using Iot.Device.Rfid;
@@ -884,6 +885,17 @@ namespace Iot.Device.Pn5180V2
         /// </summary>
         public RadioFrequencyCollision RadioFrequencyCollision { get; set; } = RadioFrequencyCollision.Normal;
 
+        public void OutputAllRegisters()
+        {
+            Span<byte> status = stackalloc byte[4];
+            for (byte reg = 0; reg <= 0x29; reg++)
+            {
+                Register regEnum = (Register)reg;
+                SpiReadRegister(regEnum, status);
+                LogInfo.Log($"{regEnum}: {BitConverter.ToString(status.ToArray())}", LogLevel.None);
+            }
+        }
+
         /// <summary>
         /// Get or set the radio frequency field. True for on, false for off
         /// </summary>
@@ -1007,7 +1019,7 @@ namespace Iot.Device.Pn5180V2
                     // Clears all interrupt
                     SpiWriteRegister(Command.WRITE_REGISTER, Register.IRQ_CLEAR, new byte[] { 0xFF, 0xFF, 0x0F, 0x00 });
                     // Sets the PN5180 into IDLE state
-                    SpiWriteRegister(Command.WRITE_REGISTER_AND_MASK, Register.SYSTEM_CONFIG, new byte[] { 0xF8, 0xFF, 0xFF, 0xFF });
+                    SpiWriteRegister(Command.WRITE_REGISTER_AND_MASK, Register.SYSTEM_CONFIG, new byte[] { 0xB8, 0xFF, 0xFF, 0xFF });
                     // Activates TRANSCEIVE routine
                     SpiWriteRegister(Command.WRITE_REGISTER_OR_MASK, Register.SYSTEM_CONFIG, new byte[] { 0x03, 0x00, 0x00, 0x00 });
                     // Sends REQB command

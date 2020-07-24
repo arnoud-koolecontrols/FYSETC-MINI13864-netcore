@@ -14,15 +14,26 @@ namespace myApp
 		static void Main(string[] args)
         {
 			App app = new App();
-
 			
             while (true) {
 				app.RgbLed.SetColor(Color.Green);
-				app.Mifare.ScanForISO14443TypeADevices();
+				for (int i = 0; i< 5; i++)
+                {
+					app.Mifare.ScanForISO14443TypeADevices(1); //we only poll for 1ms every 200 ms as the spi bus is shared with the screen
+					Thread.Sleep(199);
+				}
 				app.RgbLed.SetColor(Color.Blue);
-				app.Mifare.ScanForISO14443TypeADevices(); 
+				for (int i = 0; i < 5; i++)
+				{
+					app.Mifare.ScanForISO14443TypeADevices(1); //we only poll for 1ms every 200 ms as the spi bus is shared with the screen
+					Thread.Sleep(199);
+				}
 				app.RgbLed.SetColor(Color.Red);
-				app.Mifare.ScanForISO14443TypeADevices();
+				for (int i = 0; i < 5; i++)
+				{
+					app.Mifare.ScanForISO14443TypeADevices(1); //we only poll for 1ms every 200 ms as the spi bus is shared with the screen
+					Thread.Sleep(199);
+				}
 			}
         }
 

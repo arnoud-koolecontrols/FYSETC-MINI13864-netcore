@@ -15,7 +15,7 @@ namespace Drivers.Display
 			public int CS { get; set; } = -1;
 			public int SpiBus { get; set; } = 0;
 			public SpiDevice SPI { get; set; } = null;
-
+			public object SpiLock { get; set; } = new object();
 			public void InitSPI(SpiConnectionSettings settings)
 			{
 				this.SPI = SpiDevice.Create(settings);
@@ -32,19 +32,22 @@ namespace Drivers.Display
 			byte[] pagesBuffer = Screen.GetPagesBuffer();
 			if (Pinning != null)
 			{
-				for (int i = 0; i < pagesBuffer.Length; i++)
-				{
-					if (i % Screen.Canvas.Width == 0)
+				lock(Pinning.SpiLock)
+                {
+					for (int i = 0; i < pagesBuffer.Length; i++)
 					{
-						int page = (i / Screen.Canvas.Width);
-						this.IoController.Write(this.Pinning.A0, PinValue.Low);
-						this.Pinning.SPI.WriteByte((byte)(0xB0 + page));
-						this.Pinning.SPI.WriteByte(0x10);
-						this.Pinning.SPI.WriteByte(0x00);
-						this.IoController.Write(this.Pinning.A0, PinValue.High);
+						if (i % Screen.Canvas.Width == 0)
+						{
+							int page = (i / Screen.Canvas.Width);
+							this.IoController.Write(this.Pinning.A0, PinValue.Low);
+							this.Pinning.SPI.WriteByte((byte)(0xB0 + page));
+							this.Pinning.SPI.WriteByte(0x10);
+							this.Pinning.SPI.WriteByte(0x00);
+							this.IoController.Write(this.Pinning.A0, PinValue.High);
+						}
+						this.Pinning.SPI.WriteByte(pagesBuffer[i]);
 					}
-					this.Pinning.SPI.WriteByte(pagesBuffer[i]);
-				}
+				}	
 			}
 		}
 
@@ -104,17 +107,20 @@ namespace Drivers.Display
 		{
 			if (Pinning != null)
 			{
-				Screen.FlushBitmapToBuffer();
-				WriteBuffer();
-				this.IoController.Write(this.Pinning.A0, PinValue.Low);
-				this.Pinning.SPI.WriteByte(0xA3); // # Bias 1/7
-				this.Pinning.SPI.WriteByte(0xA0);
-				this.Pinning.SPI.WriteByte(0xC8); // # Normal Orientation
-				this.Pinning.SPI.WriteByte(0xA6); // # Normal Display (0xA7 = inverse)
-				this.Pinning.SPI.WriteByte(0x40); // set display start line at 0
-				this.Pinning.SPI.WriteByte(0x2F); // PowerMode control
-				this.Pinning.SPI.WriteByte(0x23); // Regulation Ratio
-				this.Pinning.SPI.WriteByte(0xAF);
+				lock(Pinning.SpiLock)
+                {
+					Screen.FlushBitmapToBuffer();
+					WriteBuffer();
+					this.IoController.Write(this.Pinning.A0, PinValue.Low);
+					this.Pinning.SPI.WriteByte(0xA3); // # Bias 1/7
+					this.Pinning.SPI.WriteByte(0xA0);
+					this.Pinning.SPI.WriteByte(0xC8); // # Normal Orientation
+					this.Pinning.SPI.WriteByte(0xA6); // # Normal Display (0xA7 = inverse)
+					this.Pinning.SPI.WriteByte(0x40); // set display start line at 0
+					this.Pinning.SPI.WriteByte(0x2F); // PowerMode control
+					this.Pinning.SPI.WriteByte(0x23); // Regulation Ratio
+					this.Pinning.SPI.WriteByte(0xAF);
+				}		
 			}
 		}
 	}

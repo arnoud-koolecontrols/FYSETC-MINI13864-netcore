@@ -1,10 +1,9 @@
-﻿using Iot.Device.Pn5180V2;
+﻿using Iot.Device.Card.Mifare;
+using Iot.Device.Pn5180V2;
 using Iot.Device.Rfid;
 using System;
-using System.Collections.Generic;
 using System.Device.Gpio;
 using System.Device.Spi;
-using System.Text;
 using System.Threading;
 
 namespace myApp.Drivers.Mifare
@@ -20,7 +19,7 @@ namespace myApp.Drivers.Mifare
 			public int CS { get; set; } = -1;		//note this is not the pin but the chipselect line indicator typical 0 or 1
 			public int SpiBus { get; set; } = 0;
 			public SpiDevice SPI { get; set; } = null;
-
+			public object SpiLock { get; set; } = new object();
 			public void InitSPI(SpiConnectionSettings settings)
 			{
 				this.SPI = SpiDevice.Create(settings);
@@ -58,7 +57,7 @@ namespace myApp.Drivers.Mifare
                 settings.DataBitLength = 8;
                 this.Pinning.InitSPI(settings);
 				HwReset();
-				Chip = new Iot.Device.Pn5180V2.Pn5180(Pinning.SPI, Pinning.BUSY, Pinning.NSS,null,true,Iot.Device.Card.LogLevel.Debug);
+				Chip = new Iot.Device.Pn5180V2.Pn5180(Pinning.SPI, Pinning.BUSY, Pinning.NSS,null,true,Iot.Device.Card.LogLevel.None);
 				Chip.LogTo = Iot.Device.Card.LogTo.Console;
 			}
 		}
@@ -85,28 +84,81 @@ namespace myApp.Drivers.Mifare
 		{
 			if (Pinning != null)
 			{
-				(Version product, Version firmware, Version eeprom) = Chip.GetVersions();
+				Version product = new Version();
+				Version firmware = new Version();
+				Version eeprom = new Version();
+				lock (Pinning.SpiLock)
+                {
+					(product, firmware, eeprom) = Chip.GetVersions();
+				}
 				Console.WriteLine("product: " + product.ToString());
 				Console.WriteLine("firmware: " + firmware.ToString());
 				Console.WriteLine("eeprom: " + eeprom.ToString());
 			}
 		}
 
-		public void ScanForISO14443TypeADevices()
+		public bool Hold { get; set; } = false;
+		public void ScanForISO14443TypeADevices(int scanTimeInMilliseconds)
         {
-			Console.WriteLine("start");
 			Data106kbpsTypeA cardTypeA;
 			// This will try to select the card for 1 second and will wait 300 milliseconds before trying again if none is found
-			var retok = Chip.ListenToCardIso14443TypeA(TransmitterRadioFrequencyConfiguration.Iso14443A_Nfc_PI_106_106, ReceiverRadioFrequencyConfiguration.Iso14443A_Nfc_PI_106_106, out cardTypeA, 1000);
-			if (retok)
+			bool retok = false;
+			lock (Pinning.SpiLock)
 			{
-				Console.WriteLine($"ISO 14443 Type A found:");
-				Console.WriteLine($"  ATQA: {cardTypeA.Atqa}");
-				Console.WriteLine($"  SAK: {cardTypeA.Sak}");
-				Console.WriteLine($"  UID: {BitConverter.ToString(cardTypeA.NfcId)}");
-				// This is where you do something with the card
-			}
+				retok = Chip.ListenToCardIso14443TypeA(TransmitterRadioFrequencyConfiguration.Iso14443A_Nfc_PI_106_106, ReceiverRadioFrequencyConfiguration.Iso14443A_Nfc_PI_106_106, out cardTypeA, scanTimeInMilliseconds);
 
+				if (retok)
+				{
+					Hold = true;
+					Console.WriteLine($"ISO 14443 Type A found:");
+					Console.WriteLine($"  ATQA: {cardTypeA.Atqa}");
+					Console.WriteLine($"  SAK: {cardTypeA.Sak}");
+					Console.WriteLine($"  UID: {BitConverter.ToString(cardTypeA.NfcId)}");
+					// This is where you do something with the card
+					MifareCard mifareCard = new MifareCard(Chip, cardTypeA.TargetNumber);
+					mifareCard.SetCapacity(cardTypeA.Atqa, cardTypeA.Sak);
+					mifareCard.SerialNumber = cardTypeA.NfcId;
+					mifareCard.KeyA = new byte[6] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+					mifareCard.KeyB = new byte[6] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+					for (byte block = 0; block < 64; block++)
+					{
+						mifareCard.BlockNumber = block;
+						mifareCard.Command = MifareCardCommand.AuthenticationA;
+						int ret = mifareCard.RunMifiCardCommand();
+						if (ret >= 0)
+						{
+							mifareCard.BlockNumber = block;
+							mifareCard.Command = MifareCardCommand.Read16Bytes;
+							ret = mifareCard.RunMifiCardCommand();
+							if (ret >= 0)
+							{
+								Console.WriteLine($"Block: {block}, Data: {BitConverter.ToString(mifareCard.Data)}");
+								if (block % 4 == 3)
+								{
+									// Check what are the permissions
+									for (byte j = 3; j > 0; j--)
+									{
+										var access = mifareCard.BlockAccess((byte)(block - j), mifareCard.Data);
+										Console.WriteLine($"Block: {block - j}, Access: {access}");
+									}
+									var sector = mifareCard.SectorTailerAccess(block, mifareCard.Data);
+									Console.WriteLine($"Block: {block}, Access: {sector}");
+								}
+							}
+							else
+							{
+								Console.WriteLine($"Error reading block: {block}, Data: {BitConverter.ToString(mifareCard.Data)}");
+							}
+						}
+						else
+						{
+							break;
+						}
+					}
+				}
+			}
+			while (Hold)
+				Thread.Sleep(100);
 		}
 	}
 }
