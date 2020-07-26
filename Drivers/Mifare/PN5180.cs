@@ -1,6 +1,7 @@
 ﻿using Iot.Device.Card.Mifare;
 using Iot.Device.Pn5180V2;
 using Iot.Device.Rfid;
+using myApp.Drivers.Mifare.NFC.NFCIP1;
 using System;
 using System.Device.Gpio;
 using System.Device.Spi;
@@ -97,6 +98,15 @@ namespace myApp.Drivers.Mifare
 			}
 		}
 
+		public void ScanForTargets(int scanTimeInMilliseconds)
+		{
+			lock (Pinning.SpiLock)
+			{
+				Chip.StartNFC();
+
+			}
+		}
+
 		public bool Hold { get; set; } = false;
 		public void ScanForISO14443TypeADevices(int scanTimeInMilliseconds)
         {
@@ -114,45 +124,57 @@ namespace myApp.Drivers.Mifare
 					Console.WriteLine($"  ATQA: {cardTypeA.Atqa}");
 					Console.WriteLine($"  SAK: {cardTypeA.Sak}");
 					Console.WriteLine($"  UID: {BitConverter.ToString(cardTypeA.NfcId)}");
-					// This is where you do something with the card
-					MifareCard mifareCard = new MifareCard(Chip, cardTypeA.TargetNumber);
-					mifareCard.SetCapacity(cardTypeA.Atqa, cardTypeA.Sak);
-					mifareCard.SerialNumber = cardTypeA.NfcId;
-					mifareCard.KeyA = new byte[6] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-					mifareCard.KeyB = new byte[6] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-					for (byte block = 0; block < 64; block++)
-					{
-						mifareCard.BlockNumber = block;
-						mifareCard.Command = MifareCardCommand.AuthenticationA;
-						int ret = mifareCard.RunMifiCardCommand();
-						if (ret >= 0)
+
+
+					if (Nfcip1.IsNfcipCompliant(cardTypeA.Sak, cardTypeA.NfcId))
+                    {
+						Console.WriteLine($"NFCIP1 compliant!!");
+						if ((cardTypeA.Sak & 0x20) == 0x20)
+						{
+							Chip.StartNFC();
+						}
+					} else
+                    {
+						// This is where you do something with the card
+						MifareCard mifareCard = new MifareCard(Chip, cardTypeA.TargetNumber);
+						mifareCard.SetCapacity(cardTypeA.Atqa, cardTypeA.Sak);
+						mifareCard.SerialNumber = cardTypeA.NfcId;
+						mifareCard.KeyA = new byte[6] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+						mifareCard.KeyB = new byte[6] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+						for (byte block = 0; block < 64; block++)
 						{
 							mifareCard.BlockNumber = block;
-							mifareCard.Command = MifareCardCommand.Read16Bytes;
-							ret = mifareCard.RunMifiCardCommand();
+							mifareCard.Command = MifareCardCommand.AuthenticationA;
+							int ret = mifareCard.RunMifiCardCommand();
 							if (ret >= 0)
 							{
-								Console.WriteLine($"Block: {block}, Data: {BitConverter.ToString(mifareCard.Data)}");
-								if (block % 4 == 3)
+								mifareCard.BlockNumber = block;
+								mifareCard.Command = MifareCardCommand.Read16Bytes;
+								ret = mifareCard.RunMifiCardCommand();
+								if (ret >= 0)
 								{
-									// Check what are the permissions
-									for (byte j = 3; j > 0; j--)
+									Console.WriteLine($"Block: {block}, Data: {BitConverter.ToString(mifareCard.Data)}");
+									if (block % 4 == 3)
 									{
-										var access = mifareCard.BlockAccess((byte)(block - j), mifareCard.Data);
-										Console.WriteLine($"Block: {block - j}, Access: {access}");
+										// Check what are the permissions
+										for (byte j = 3; j > 0; j--)
+										{
+											var access = mifareCard.BlockAccess((byte)(block - j), mifareCard.Data);
+											Console.WriteLine($"Block: {block - j}, Access: {access}");
+										}
+										var sector = mifareCard.SectorTailerAccess(block, mifareCard.Data);
+										Console.WriteLine($"Block: {block}, Access: {sector}");
 									}
-									var sector = mifareCard.SectorTailerAccess(block, mifareCard.Data);
-									Console.WriteLine($"Block: {block}, Access: {sector}");
+								}
+								else
+								{
+									Console.WriteLine($"Error reading block: {block}, Data: {BitConverter.ToString(mifareCard.Data)}");
 								}
 							}
 							else
 							{
-								Console.WriteLine($"Error reading block: {block}, Data: {BitConverter.ToString(mifareCard.Data)}");
+								break;
 							}
-						}
-						else
-						{
-							break;
 						}
 					}
 				}
