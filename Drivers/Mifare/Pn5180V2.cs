@@ -1421,10 +1421,15 @@ namespace Iot.Device.Pn5180V2
                 // ********************************************
                 LogInfo.Log($"Send NDEF SNEP", debugLevel);
                 NdefLibrary.Ndef.NdefMessage message = new NdefLibrary.Ndef.NdefMessage();
-                NdefLibrary.Ndef.NdefTextRecord record = new NdefLibrary.Ndef.NdefTextRecord();
-                record.LanguageCode = "en";
-                record.Text = "Wat een geweldige test is dit";
-                message.Add(record);
+
+                NdefLibrary.Ndef.NdefUriRecord uriRecord = new NdefLibrary.Ndef.NdefUriRecord();
+                uriRecord.Uri = "http://www.koolecontrols.nl";
+
+                NdefLibrary.Ndef.NdefTextRecord textRecord = new NdefLibrary.Ndef.NdefTextRecord();
+                textRecord.LanguageCode = "en";
+                textRecord.Text = "Wat een geweldige test is dit";
+
+                message.Add(uriRecord);
                 byte[] ndef = message.ToByteArray();
                 byte[] snep = SNEP.Request(ndef);
                 byte[] llcp = LLCP.GetFrame(0x04, LLCP.PTYPES.I, 0x20, 0, snep);
