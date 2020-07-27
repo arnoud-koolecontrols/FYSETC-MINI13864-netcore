@@ -62,40 +62,14 @@ namespace myApp.Drivers.Mifare.NFC.NFCIP1
 
 		public static byte[] Fc128AddStartAndCRC(byte[] data)
         {
-
-
-
-            //byte[] result = new byte[data.Length + 1];
-            //int index = 0;
-            //result[index++] = 0xF0;
-            //data.CopyTo(result, index);
-            //return result;
-
-            //byte[] result = new byte[data.Length + 3];
-            //int index = 0;
-            //result[index++] = 0xF0;
-            //data.CopyTo(result, index);
-            //index += data.Length;
-            //byte[] crc = ISO14443aCRC(data);
-            //crc.CopyTo(result, index);
-            //return result;
-
-
-
-
-
-            byte[] result = new byte[data.Length + 4];
-            int index = 0;
-            result[index++] = 0xF0;
+			//full frame withouth crc
+			byte[] result = new byte[data.Length + 2];
+			int index = 0;
+			result[index++] = 0xF0;
 			result[index++] = (byte)(data.Length + 1);
 			data.CopyTo(result, index);
-            index += data.Length;
-            byte[] crc = ISO14443aCRC(data);
-            crc.CopyTo(result, index);
-            return result;
-
-            //return data;
-        }
+			return result;
+		}
 
 		public static byte[] AtrReq(byte[] nfcid, byte[] genBytes)
 		{ 
@@ -107,7 +81,7 @@ namespace myApp.Drivers.Mifare.NFC.NFCIP1
             result[12] = 0; //DID
             result[13] = 0; //BSI
             result[14] = 0; //BRI
-            result[15] = 0; //PPI
+            result[15] = 32; //PPI
             if (genBytes.Length > 0)
                 result[15] |= 0x02;
             genBytes.CopyTo(result, 16);
@@ -118,13 +92,12 @@ namespace myApp.Drivers.Mifare.NFC.NFCIP1
 
 		public static byte[] WupReq(byte[] nfcid)
 		{
-			int length = 14;
+			int length = 13;
 			byte[] result = new byte[length];
-			result[0] = (byte)length;
-			result[1] = (byte)Types.REQ;
-			result[2] = (byte)Commands.WUP_REQ;
-			nfcid.CopyTo(result, 3);
-			result[13] = 0; //DID
+			result[0] = (byte)Types.REQ;
+			result[1] = (byte)Commands.WUP_REQ;
+			nfcid.CopyTo(result, 2);
+			result[12] = 0; //DID
 
 			result = Fc128AddStartAndCRC(result);
 			return result;
@@ -132,28 +105,26 @@ namespace myApp.Drivers.Mifare.NFC.NFCIP1
 
 		public static byte[] PslReq(byte brs, byte fsl)
 		{
-			int length = 6;
+			int length = 5;
 			byte[] result = new byte[length];
-			result[0] = (byte)length;
-			result[1] = (byte)Types.REQ;
-			result[2] = (byte)Commands.PSL_REQ;
-			result[3] = 0; //DID
-			result[4] = brs; //BRS
-			result[5] = fsl; //FSL
+			result[0] = (byte)Types.REQ;
+			result[1] = (byte)Commands.PSL_REQ;
+			result[2] = 0; //DID
+			result[3] = brs; //BRS
+			result[4] = fsl; //FSL
 
 			result = Fc128AddStartAndCRC(result);
 			return result;
 		}
 
-		public static byte[] DepReq(byte[] nfcid, byte pfl, byte[] data)
+		public static byte[] DepReq(byte pfl, byte[] data)
 		{
-			int length = 4 + data.Length;
+			int length = 3 + data.Length;
 			byte[] result = new byte[length];
-			result[0] = (byte)length;
-			result[1] = (byte)Types.REQ;
-			result[2] = (byte)Commands.DEP_REQ;
-			result[3] = pfl; //PFL
-			data.CopyTo(result, 4);
+			result[0] = (byte)Types.REQ;
+			result[1] = (byte)Commands.DEP_REQ;
+			result[2] = pfl; //PFL
+			data.CopyTo(result, 3);
 
 			result = Fc128AddStartAndCRC(result);
 			return result;
@@ -161,12 +132,11 @@ namespace myApp.Drivers.Mifare.NFC.NFCIP1
 
 		public static byte[] DslReq()
 		{
-			int length = 4;
+			int length = 3;
 			byte[] result = new byte[length];
-			result[0] = (byte)length;
-			result[1] = (byte)Types.REQ;
-			result[2] = (byte)Commands.DSL_REQ;
-			result[3] = 0; //DID
+			result[0] = (byte)Types.REQ;
+			result[1] = (byte)Commands.DSL_REQ;
+			result[2] = 0; //DID
 
 			result = Fc128AddStartAndCRC(result);
 			return result;
@@ -174,26 +144,24 @@ namespace myApp.Drivers.Mifare.NFC.NFCIP1
 
 		public static byte[] RlsReq()
 		{
-			int length = 4;
+			int length = 3;
 			byte[] result = new byte[length];
-			result[0] = (byte)length;
-			result[1] = (byte)Types.REQ;
-			result[2] = (byte)Commands.RLS_REQ;
-			result[3] = 0; //DID
+			result[0] = (byte)Types.REQ;
+			result[1] = (byte)Commands.RLS_REQ;
+			result[2] = 0; //DID
 
 			result = Fc128AddStartAndCRC(result);
 			return result;
 		}
 		public static byte[] PolReq()
 		{
-			int length = 6;
+			int length = 5;
 			byte[] result = new byte[length];
-			result[0] = (byte)length;
-			result[1] = 0;
+			result[0] = 0;
+			result[1] = 0xFF;
 			result[2] = 0xFF;
-			result[3] = 0xFF;
+			result[3] = 0;
 			result[4] = 0;
-			result[5] = 0;
 
 			result = Fc128AddStartAndCRC(result);
 			return result;

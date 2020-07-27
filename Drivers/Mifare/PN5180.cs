@@ -115,6 +115,8 @@ namespace myApp.Drivers.Mifare
 			bool retok = false;
 			lock (Pinning.SpiLock)
 			{
+
+
 				retok = Chip.ListenToCardIso14443TypeA(TransmitterRadioFrequencyConfiguration.Iso14443A_Nfc_PI_106_106, ReceiverRadioFrequencyConfiguration.Iso14443A_Nfc_PI_106_106, out cardTypeA, scanTimeInMilliseconds);
 
 				if (retok)
@@ -127,14 +129,16 @@ namespace myApp.Drivers.Mifare
 
 
 					if (Nfcip1.IsNfcipCompliant(cardTypeA.Sak, cardTypeA.NfcId))
-                    {
+					{
 						Console.WriteLine($"NFCIP1 compliant!!");
 						if ((cardTypeA.Sak & 0x20) == 0x20)
 						{
 							Chip.StartNFC();
+
 						}
-					} else
-                    {
+					}
+					else
+					{
 						// This is where you do something with the card
 						MifareCard mifareCard = new MifareCard(Chip, cardTypeA.TargetNumber);
 						mifareCard.SetCapacity(cardTypeA.Atqa, cardTypeA.Sak);
@@ -178,7 +182,7 @@ namespace myApp.Drivers.Mifare
 						}
 					}
 				}
-			}
+            }
 			while (Hold)
 				Thread.Sleep(100);
 		}

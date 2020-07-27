@@ -14,9 +14,11 @@ namespace myApp
     {
 		static void Main(string[] args)
         {
-			App app = new App();
-			
+            App app = new App();
+
             while (true) {
+
+
                 app.RgbLed.SetColor(Color.Green);
                 for (int i = 0; i < 5; i++)
                 {
