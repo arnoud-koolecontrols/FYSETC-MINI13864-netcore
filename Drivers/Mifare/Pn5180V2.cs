@@ -996,7 +996,52 @@ namespace Iot.Device.Pn5180V2
             return result;
         }
 
-        //
+        public int Tranceive(byte targetNumber, ReadOnlySpan<byte> dataToSend, out Span<byte> dataFromCard, int timeOutInMilliSeconds)
+        {
+            int result = -1;
+            dataFromCard = new byte[0];
+
+            if (targetNumber == 0)
+            {
+                // Check if we have a Mifare Card authentication request
+                // Only valid for Type A card so with a target number equal to 0
+                if ((targetNumber == 0) && ((dataToSend[0] == (byte)MifareCardCommand.AuthenticationA) || (dataToSend[0] == (byte)MifareCardCommand.AuthenticationB)))
+                {
+                    var ret = MifareAuthenticate(dataToSend.Slice(2, 6).ToArray(), (MifareCardCommand)dataToSend[0], dataToSend[1], dataToSend.Slice(8).ToArray());
+                    return ret ? 0 : -1;
+                }
+                else
+                {
+                    // Clears all interrupt
+                    SpiWriteRegister(Command.WRITE_REGISTER, Register.IRQ_CLEAR, new byte[] { 0xFF, 0xFF, 0x0F, 0x00 });
+                    bool ret = SendDataToCard(dataToSend.ToArray());
+                    DateTime dtTimeout = DateTime.Now.AddMilliseconds(timeOutInMilliSeconds);
+                    byte[] status = new byte[4];
+                    SpiReadRegister(Register.IRQ_STATUS, status);
+                    while ((status[0] & 0x03) != 0x03)
+                    {
+                        Thread.Sleep(1);
+                        SpiReadRegister(Register.IRQ_STATUS, status);
+                        if (dtTimeout <= DateTime.Now)
+                            return -1;
+                    }
+                    int numBytes;
+                    (numBytes, _) = GetNumberOfBytesReceivedAndValidBits();
+                    result = numBytes;
+                    if (numBytes > 0)
+                    {
+                        dataFromCard = new byte[numBytes];
+                        ReadDataFromCard(dataFromCard, dataFromCard.Length);
+                    }
+                }
+            }
+            else
+            {
+                //other stuff not supported yett
+            }
+            return result;
+        }
+
         public int StartNFC()
         {
             int result = 0;
@@ -1016,9 +1061,9 @@ namespace Iot.Device.Pn5180V2
 
             byte[] LLCP_MAGIC_HEADER = new byte[] {
             	//> LLCP magic number
-		        0x46,
-                0x66,
-                0x6D,
+		        0x46,   //F
+                0x66,   //f
+                0x6D,   //m
 		        //TLVs
 		        //> version
 		        0x01,
@@ -1034,9 +1079,6 @@ namespace Iot.Device.Pn5180V2
                 0x01,
                 0x96
             };
-
-
-
 
             byte[] LLCP_CONNECT_SNEP = new byte[] {
             	//> LLCP Connect	0000 01      01 00      10 0010
@@ -1218,123 +1260,89 @@ namespace Iot.Device.Pn5180V2
             //    LogInfo.Log($"RATS: Not replied", debugLevel);
             //}
 
-            OutputAllRegisters();
-
-            for (int i=0; i<2; i++)
+            //********************************************
+            //****** LLCP Bind Send LLCP MAGIC HEADER and receive the magic header
+            //********************************************
+            byte targetNumber = 0;
+            byte[] atr_req = Nfcip1.AtrReq(NfcId3T_TX, LLCP_MAGIC_HEADER);
+            Thread.Sleep(1);
+            Span<byte> atr_res; //its devided by 100 for delay
+            LogInfo.Log($"ATR_REQ: {BitConverter.ToString(atr_req)}", debugLevel);
+            if (Tranceive(targetNumber, atr_req, out atr_res, 500) >= 0)
             {
-                //********************************************
-                //****** LLCP Bind Send LLCP MAGIC HEADER and receive the magic header
-                //********************************************
-                byte[] atr_req = Nfcip1.AtrReq(NfcId3T_TX, LLCP_MAGIC_HEADER);
-                // Clears all interrupt
-                SpiWriteRegister(Command.WRITE_REGISTER, Register.IRQ_CLEAR, new byte[] { 0xFF, 0xFF, 0x0F, 0x00 });
-                ret = SendDataToCard(atr_req);
-                LogInfo.Log($"ATR_REQ: {BitConverter.ToString(atr_req)}", debugLevel);
-                SpiReadRegister(Register.IRQ_STATUS, status);
-                int count = 0;
-                while ((status[0] & 0x03) != 0x03)
-                {
-                    Thread.Sleep(1);
-                    SpiReadRegister(Register.IRQ_STATUS, status);
-                    LogInfo.Log($"  wait:  {BitConverter.ToString(status)} {count}", debugLevel);
-                    count++;
-                }
-                (numBytes, _) = GetNumberOfBytesReceivedAndValidBits();
-                result = numBytes;
-                LogInfo.Log($"ATR_REQ numBytes: {numBytes}", debugLevel);
-                if (numBytes > 0)
-                {
-                    byte[] reply = new byte[numBytes];
-                    ReadDataFromCard(reply, reply.Length);
-                    LogInfo.Log($"ATR_REQ Response: {BitConverter.ToString(reply)}", debugLevel);
+                LogInfo.Log($"ATR_REQ Response: {BitConverter.ToString(atr_res.ToArray())}", debugLevel);
 
-                    if ((reply[2] == (byte)Nfcip1.Types.RES) && (reply[3] == (byte)Nfcip1.Commands.ATR_RES)) //hebben we een reply ontvangen
+                byte[] reply = atr_res.ToArray();
+                if ((reply[2] == (byte)Nfcip1.Types.RES) && (reply[3] == (byte)Nfcip1.Commands.ATR_RES)) //hebben we een reply ontvangen
+                {
+                    Array.Copy(reply, 4, NfcId3T_RX, 0, 10);
+                    double TimeOut = (reply[17] * 309.8);
+                    LogInfo.Log($"  Time-out used: {TimeOut}", debugLevel);
+                    byte ppt = reply[18];
+                    LogInfo.Log($"  Max buffersize: {((ppt >> 4) + 1) * 64}", debugLevel);
+                    if ((ppt & 0x02) > 0)
                     {
-                        Array.Copy(reply, 4, NfcId3T_RX, 0, 10);
-                        double TimeOut = (reply[17] * 309.8);
-                        LogInfo.Log($"  Time-out used: {TimeOut}", debugLevel);
-                        byte ppt = reply[18];
-                        LogInfo.Log($"  Max buffersize: {((ppt >> 4) + 1) * 64}", debugLevel);
-                        if ((ppt & 0x02) > 0)
+                        byte[] tGenBytes = new byte[reply.Length - 19];
+                        Array.Copy(reply, 19, tGenBytes, 0, tGenBytes.Length);
+                        LogInfo.Log($"  GenBytes available: {BitConverter.ToString(tGenBytes)}", debugLevel);
+                        if ((reply[19] == 0x46) && (reply[20] == 0x66) && (reply[21] == 0x6D))
                         {
-                            byte[] tGenBytes = new byte[reply.Length - 19];
-                            Array.Copy(reply, 19, tGenBytes, 0, tGenBytes.Length);
-                            LogInfo.Log($"  GenBytes available: {BitConverter.ToString(tGenBytes)}", debugLevel);
-                            if ((reply[19] == 0x46) && (reply[20] == 0x66) && (reply[21] == 0x6D))
-                            {
-                                LogInfo.Log($"  LLCP magic header found!", debugLevel);
-                                //int cnt = 0;
-                                //int stop = 0;
-                                //for (i = 21; i < replyCount; i++)
-                                //{
-                                //    if (cnt == 0)
-                                //    {
-                                //        snprintf(test, BUFFERSIZE, "%s\t\tType: %d ", test, reply[i]);
-                                //        cnt++;
-                                //    }
-                                //    else
-                                //    {
-                                //        if (cnt == 1)
-                                //        {
-                                //            snprintf(test, BUFFERSIZE, "%slength: %d value: ", test, reply[i]);
-                                //            stop = reply[i];
-                                //            cnt++;
-                                //        }
-                                //        else
-                                //        {
-                                //            snprintf(test, BUFFERSIZE, "%s%.2x ", test, reply[i]);
-                                //            cnt++;
-                                //            if ((stop + 2) == cnt)
-                                //            {
-                                //                cnt = 0;
-                                //                snprintf(test, BUFFERSIZE, "%s\r\n", test);
-                                //            }
-                                //        }
-                                //    }
-                                //}
-                                initStep = 2;
-                            }
+                            LogInfo.Log($"  LLCP magic header found!", debugLevel);
+                            //int cnt = 0;
+                            //int stop = 0;
+                            //for (i = 21; i < replyCount; i++)
+                            //{
+                            //    if (cnt == 0)
+                            //    {
+                            //        snprintf(test, BUFFERSIZE, "%s\t\tType: %d ", test, reply[i]);
+                            //        cnt++;
+                            //    }
+                            //    else
+                            //    {
+                            //        if (cnt == 1)
+                            //        {
+                            //            snprintf(test, BUFFERSIZE, "%slength: %d value: ", test, reply[i]);
+                            //            stop = reply[i];
+                            //            cnt++;
+                            //        }
+                            //        else
+                            //        {
+                            //            snprintf(test, BUFFERSIZE, "%s%.2x ", test, reply[i]);
+                            //            cnt++;
+                            //            if ((stop + 2) == cnt)
+                            //            {
+                            //                cnt = 0;
+                            //                snprintf(test, BUFFERSIZE, "%s\r\n", test);
+                            //            }
+                            //        }
+                            //    }
+                            //}
+                            initStep = 2;
                         }
                     }
-
                 }
-                else
-                {
-                    LogInfo.Log($"ATR_REQ No response", debugLevel);
-                }
+            }
+            else
+            {
+                LogInfo.Log($"ATR_REQ No response", debugLevel);
             }
 
 
             if (initStep == 2)
             {
+                Thread.Sleep(20);
                 LogInfo.Log($"LLCP SYMM", debugLevel);
                 //********************************************
                 //****** LLCP SYMM
                 //********************************************
                 byte[] dep_req = Nfcip1.DepReq(0, new byte[] { 0, 0 });
-                // Clears all interrupt
-                SpiWriteRegister(Command.WRITE_REGISTER, Register.IRQ_CLEAR, new byte[] { 0xFF, 0xFF, 0x0F, 0x00 });
-                ret = SendDataToCard(dep_req);
+                Span<byte> dep_res; //its devided by 100 for delay
                 LogInfo.Log($"DEP_REQ: {BitConverter.ToString(dep_req)}", debugLevel);
-                SpiReadRegister(Register.IRQ_STATUS, status);
-                int count = 0;
-                while ((status[0] & 0x03) != 0x03)
+                if (Tranceive(targetNumber, dep_req, out dep_res, 500) >= 0)
                 {
-                    Thread.Sleep(1);
-                    SpiReadRegister(Register.IRQ_STATUS, status);
-                    LogInfo.Log($"  wait:  {BitConverter.ToString(status)} {count}", debugLevel);
-                    count++;
-                }
-                (numBytes, _) = GetNumberOfBytesReceivedAndValidBits();
-                result = numBytes;
-                LogInfo.Log($"DEP_REQ numBytes: {numBytes}", debugLevel);
-                if (numBytes > 0)
-                {
-                    byte[] reply = new byte[numBytes];
-                    ReadDataFromCard(reply, reply.Length);
+                    byte[] reply = dep_res.ToArray();
                     LogInfo.Log($"DEP_REQ Response: {BitConverter.ToString(reply)}", debugLevel);
                     initStep++;
-                    //showLLCPHeader(test, &reply[4], replyCount - 4);
                 }
                 else
                 {
@@ -1344,34 +1352,19 @@ namespace Iot.Device.Pn5180V2
 
             if (initStep == 3)
             {
+                Thread.Sleep(20);
                 LogInfo.Log($"LLCP SYMM", debugLevel);
                 //********************************************
                 //****** LLCP SYMM
                 //********************************************
                 byte[] dep_req = Nfcip1.DepReq(1, new byte[] { 0, 0 });
-                // Clears all interrupt
-                SpiWriteRegister(Command.WRITE_REGISTER, Register.IRQ_CLEAR, new byte[] { 0xFF, 0xFF, 0x0F, 0x00 });
-                ret = SendDataToCard(dep_req);
+                Span<byte> dep_res; //its devided by 100 for delay
                 LogInfo.Log($"DEP_REQ: {BitConverter.ToString(dep_req)}", debugLevel);
-                SpiReadRegister(Register.IRQ_STATUS, status);
-                int count = 0;
-                while ((status[0] & 0x03) != 0x03)
+                if (Tranceive(targetNumber, dep_req, out dep_res, 500) >= 0)
                 {
-                    Thread.Sleep(1);
-                    SpiReadRegister(Register.IRQ_STATUS, status);
-                    LogInfo.Log($"  wait:  {BitConverter.ToString(status)} {count}", debugLevel);
-                    count++;
-                }
-                (numBytes, _) = GetNumberOfBytesReceivedAndValidBits();
-                result = numBytes;
-                LogInfo.Log($"DEP_REQ numBytes: {numBytes}", debugLevel);
-                if (numBytes > 0)
-                {
-                    byte[] reply = new byte[numBytes];
-                    ReadDataFromCard(reply, reply.Length);
+                    byte[] reply = dep_res.ToArray();
                     LogInfo.Log($"DEP_REQ Response: {BitConverter.ToString(reply)}", debugLevel);
                     initStep++;
-                    //showLLCPHeader(test, &reply[4], replyCount - 4);
                 }
                 else
                 {
@@ -1381,30 +1374,17 @@ namespace Iot.Device.Pn5180V2
 
             if (initStep == 4)
             {
+                Thread.Sleep(20);
                 LogInfo.Log($"LLCP CONNECT", debugLevel);
                 // ********************************************
                 // ******LLCP CONNECT
                 // ********************************************
                 byte[] dep_req = Nfcip1.DepReq(2, LLCP_CONNECT_SNEP);
-                SpiWriteRegister(Command.WRITE_REGISTER, Register.IRQ_CLEAR, new byte[] { 0xFF, 0xFF, 0x0F, 0x00 });
-                ret = SendDataToCard(dep_req);
+                Span<byte> dep_res; //its devided by 100 for delay
                 LogInfo.Log($"DEP_REQ: {BitConverter.ToString(dep_req)}", debugLevel);
-                SpiReadRegister(Register.IRQ_STATUS, status);
-                int count = 0;
-                while ((status[0] & 0x03) != 0x03)
+                if (Tranceive(targetNumber, dep_req, out dep_res, 500) >= 0)
                 {
-                    Thread.Sleep(1);
-                    SpiReadRegister(Register.IRQ_STATUS, status);
-                    LogInfo.Log($"  wait:  {BitConverter.ToString(status)} {count}", debugLevel);
-                    count++;
-                }
-                (numBytes, _) = GetNumberOfBytesReceivedAndValidBits();
-                result = numBytes;
-                LogInfo.Log($"DEP_REQ numBytes: {numBytes}", debugLevel);
-                if (numBytes > 0)
-                {
-                    byte[] reply = new byte[numBytes];
-                    ReadDataFromCard(reply, reply.Length);
+                    byte[] reply = dep_res.ToArray();
                     LogInfo.Log($"DEP_REQ Response: {BitConverter.ToString(reply)}", debugLevel);
                     initStep++;
                 }
@@ -1416,6 +1396,7 @@ namespace Iot.Device.Pn5180V2
 
             if (initStep == 5)
             {
+                Thread.Sleep(20);
                 // ********************************************
                 // ****** SNEP MODE (message NFC powered by Stollmann)
                 // ********************************************
@@ -1435,25 +1416,11 @@ namespace Iot.Device.Pn5180V2
                 byte[] llcp = LLCP.GetFrame(0x04, LLCP.PTYPES.I, 0x20, 0, snep);
                 byte[] dep_req = Nfcip1.DepReq(3, llcp);
 
-                SpiWriteRegister(Command.WRITE_REGISTER, Register.IRQ_CLEAR, new byte[] { 0xFF, 0xFF, 0x0F, 0x00 });
-                ret = SendDataToCard(dep_req);
+                Span<byte> dep_res; //its devided by 100 for delay
                 LogInfo.Log($"DEP_REQ: {BitConverter.ToString(dep_req)}", debugLevel);
-                SpiReadRegister(Register.IRQ_STATUS, status);
-                int count = 0;
-                while ((status[0] & 0x03) != 0x03)
+                if (Tranceive(targetNumber, dep_req, out dep_res, 500) >= 0)
                 {
-                    Thread.Sleep(1);
-                    SpiReadRegister(Register.IRQ_STATUS, status);
-                    LogInfo.Log($"  wait:  {BitConverter.ToString(status)} {count}", debugLevel);
-                    count++;
-                }
-                (numBytes, _) = GetNumberOfBytesReceivedAndValidBits();
-                result = numBytes;
-                LogInfo.Log($"DEP_REQ numBytes: {numBytes}", debugLevel);
-                if (numBytes > 0)
-                {
-                    byte[] reply = new byte[numBytes];
-                    ReadDataFromCard(reply, reply.Length);
+                    byte[] reply = dep_res.ToArray();
                     LogInfo.Log($"DEP_REQ Response: {BitConverter.ToString(reply)}", debugLevel);
                     initStep++;
                 }
