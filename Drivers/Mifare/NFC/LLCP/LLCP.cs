@@ -1,4 +1,5 @@
 ﻿using Iot.Device.Rfid;
+using myApp.Drivers.Mifare.NFC.LLCP.ServiceManagers;
 using System;
 using System.Buffers.Text;
 using System.Collections.Generic;
@@ -10,78 +11,8 @@ using System.Text.Unicode;
 
 namespace myApp.Drivers.Mifare.NFC.LLCP
 {
-    public class LLCPServiceManager
-    {
-        /// <summary>
-        /// Address Field DSAP: Destination Service Access Point
-        /// 00h – 0Fh   Identifies the Well-Known Service Access Points
-        /// 10h – 1Fh   Identifies Services in the local service environment and are advertised by local SDP
-        /// 20h – 3Fh   Identifies Services in the local service environment and are NOT advertised by local SDP
-        /// </summary>
-        public byte DSAP { get; set; } = 0;
-        /// <summary>
-        /// Address Field SSAP: Source Service Access Point
-        /// 00h – 0Fh   Identifies the Well-Known Service Access Points
-        /// 10h – 1Fh   Identifies Services in the local service environment and are advertised by local SDP
-        /// 20h – 3Fh   Identifies Services in the local service environment and are NOT advertised by local SDP
-        /// </summary>
-        public byte SSAP { get; set; } = 0;
-        /// <summary>
-        /// The maximum information unit (MIU) is the maximum number of octets in the information field of 
-        ///   an LLC PDU that the local LLC is able to receive. 
-        /// The default MIU is 128.
-        /// The MIUX parameter MAY be transmitted in the information field of a CONNECT or CC PDU 
-        ///   to announce the local LLC’s larger MIU for that data link connection endpoint
-        /// </summary>
-        public ushort MIUX { get; set; } = 128;
-        /// <summary>
-        /// The RW parameter SHALL be encoded as a 4-bit unsigned integer value indicating the receive window size.
-        /// The receive window size SHALL be in the inclusive range of values between 0 and 15.
-        ///     NOTE A receive window size of zero indicates that the local LLC will not accept I PDUs on that data link connection.
-        ///     A receive window size of one indicates that the local LLC will acknowledge every I PDU before accepting additional I PDUs.
-        /// </summary>
-        public byte RW { get; set; } = 1;
-        /// <summary>
-        /// A servicename which can be looked up in the ServiceDiscoveryService
-        /// </summary>
-        public string ServiceName { get; set; } = "";
-    }
-
     public class LLCP
     {
-        public enum LLCParameters
-        {
-            Version = 1,
-            MIUX = 2,
-            WellKnownServiceList = 3,
-            LinkTimOut = 4,
-            ReceiveWindowSize = 5,
-            ServiceName = 6,
-            Option = 7,
-            ServiceDiscoveryRequest = 8,
-            ServiceDiscoveryResponse = 9,
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public enum LinkServiceClass
-        {
-            Unknown = 0,
-            /// <summary>
-            /// Devices offering only the Connectionless transport service
-            /// </summary>
-            Class1,
-            /// <summary>
-            /// Devices offering only the Connection-oriented transport service
-            /// </summary>
-            Class2,
-            /// <summary>
-            /// Devices offering both Connectionless and Connection-oriented transport services
-            /// </summary>
-            Class3
-        }
-
         public enum PTYPES
         {
             SYMM = 0,
@@ -117,108 +48,50 @@ namespace myApp.Drivers.Mifare.NFC.LLCP
         /// <summary>
         /// LLCP protocol version
         /// </summary>
-        public Version Version { get; private set; } = new Version(1, 1);
-
+        public static Version Version { get; } = new Version(1, 1);
+        public static byte[] LLCPMagicNumber { get; } = new byte[] { 0x46, 0x66, 0x6D };
         public LinkServiceClass LSC { get; private set; } = LinkServiceClass.Class3;
+        private Dictionary<int, ServiceManager> ServiceManagers { get; set; } = new Dictionary<int, ServiceManager>();
+        
         public LLCP(ILLCP chip, Data106kbpsTypeA iso14443Device)
         {
             Chip = chip;
             Iso14443Device = iso14443Device;
-
+            IsoIec18092LinkServiceManager linkManager = new IsoIec18092LinkServiceManager();
+            ServiceManagers.Add(linkManager.SSAP, linkManager);
         }
 
-        private byte[] LLCParameterBlockVersion(Version version)
+        private int GetSupportedWelKnownServiceList()
         {
-            byte[] result = new byte[3];
-            result[0] = (byte)LLCParameters.Version;
-            result[1] = 1; // length
-            result[2] = (byte)(((version.Major & 0xF) << 4) | (version.Minor & 0xF));
-            return result;
-        }
-
-        private byte[] LLCParameterBlockMIUX(int miux)
-        {
-            if (miux < 128)
+            int wks = 0;
+            foreach (KeyValuePair<int, ServiceManager> pair in ServiceManagers)
             {
-                throw new Exception("miux should be atleast 128");
-            } else
-            {
-                 miux -= 128;
+                if (pair.Key < 0x10)
+                {
+                    wks |= 1 << pair.Key;
+                }
             }
-            byte[] result = new byte[4];
-            result[0] = (byte)LLCParameters.MIUX;
-            result[1] = 2; // length
-            result[2] = (byte)((miux >> 8) & 0x3);
-            result[3] = (byte)(miux & 0xFF);
-            return result;
+            return wks;
         }
 
-        private byte[] LLCParameterBlockWellKnownServiceList(int value)
+        public void Start()
         {
-            value |= 1; // LLC Link Management Service 
-            byte[] result = new byte[4];
-            result[0] = (byte) LLCParameters.WellKnownServiceList;
-            result[1] = 2; // length
-            result[2] = (byte) ((value >> 8) & 0xFF);
-            result[3] = (byte) (value & 0xFF);
-            return result;
+            if (ServiceManagers.ContainsKey(0))
+            {
+                if (ServiceManagers[0] is ILinkManager)
+                {
+                    ILinkManager manager = (ILinkManager)ServiceManagers[0];
+                    if (manager.LinkActivation( this.Chip,Version, GetSupportedWelKnownServiceList(), LinkTimeOut, LSC ))
+                    {
+
+                    }
+                    return;
+                } 
+            }
+            throw new Exception("No linkmanager configured");
         }
 
-        private byte[] LLCParameterBlockLinkTimOut(int valueInMilliSeconds)
-        {
-            byte[] result = new byte[3];
-            valueInMilliSeconds /= 10;
-            result[0] = (byte)LLCParameters.LinkTimOut;
-            result[1] = 1; // length
-            result[2] = (byte)(valueInMilliSeconds & 0xFF);
-            return result;
-        }
-
-        private byte[] LLCParameterBlockReceiveWindowSize(int receiveWindow)
-        {
-            byte[] result = new byte[3];
-            result[0] = (byte)LLCParameters.ReceiveWindowSize;
-            result[1] = 1; // length
-            result[2] = (byte)(receiveWindow & 0xF);
-            return result;
-        }
-
-        private byte[] LLCParameterBlockServiceName(string servicename)
-        {
-            byte[] result = new byte[servicename.Length + 2];
-            result[0] = (byte)LLCParameters.ServiceName;
-            result[1] = (byte)servicename.Length; // length
-            Encoding.UTF8.GetBytes(servicename).CopyTo(result, 2);
-            return result;
-        }
-        private byte[] LLCParameterBlockOption(LinkServiceClass lsc)
-        {
-            byte[] result = new byte[3];
-            result[0] = (byte)LLCParameters.ServiceName;
-            result[1] = 1; // length
-            result[2] = (byte)lsc;
-            return result;
-        }
-
-        private byte[] LLCParameterBlockServiceDiscoveryRequest(byte tid, string servicename)
-        {
-            byte[] result = new byte[servicename.Length + 3];
-            result[0] = (byte)LLCParameters.ServiceDiscoveryRequest;
-            result[1] = (byte)(servicename.Length + 1); // length
-            result[2] = tid;
-            Encoding.UTF8.GetBytes(servicename).CopyTo(result, 3);
-            return result;
-        }
-
-        private byte[] LLCParameterBlockServiceDiscoveryResponse(byte tid, byte serviceAccessPoint)
-        {
-            byte[] result = new byte[4];
-            result[0] = (byte)LLCParameters.ServiceDiscoveryResponse;
-            result[1] = 2; // length
-            result[2] = tid;
-            result[2] = (byte)(serviceAccessPoint & 0x3F);
-            return result;
-        }
+ 
 
         public static byte[] GetFrame(byte dsap, PTYPES pType, byte ssap, byte seq, byte[] payload)
         {
