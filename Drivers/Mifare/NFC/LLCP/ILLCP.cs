@@ -35,10 +35,10 @@ namespace myApp.Drivers.Mifare.NFC.LLCP
         /// If the RX IRQ flag is set the data is red from the chip. After this the RX IRQ flag will be reset. (If not done automaticly by the chip)
         /// </summary>
         /// <param name="targetNumber"></param>
-        /// <param name="dataFromCard"></param>
+        /// <param name="dataToReceive"></param>
         /// <param name="timeOutInMilliSeconds"></param>
         /// <returns></returns>
-        int ReceiveData(byte targetNumber, out Span<byte> dataFromCard, int timeOutInMilliSeconds);
+        int ReceiveData(byte targetNumber, out Span<byte> dataToReceive, int timeOutInMilliSeconds);
         
     }
 }
