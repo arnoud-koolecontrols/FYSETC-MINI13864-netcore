@@ -1,14 +1,9 @@
 ﻿using Iot.Device.Rfid;
+using myApp.Drivers.Mifare.NFC.LLCP.Parameters;
 using myApp.Drivers.Mifare.NFC.LLCP.ServiceManagers;
 using System;
-using System.Buffers.Text;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Net.Mail;
-using System.Net.Security;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Unicode;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,7 +35,7 @@ namespace myApp.Drivers.Mifare.NFC.LLCP
         }
 
         public Data106kbpsTypeA Iso14443Device { get; private set; } = null;
-        public ILLCP Chip { get; private set; } = null;
+        public ITranceiver Chip { get; private set; } = null;
         /// <summary>
         /// The LTO parameter SHALL specify the maximum time interval between the last received bit of an 
         ///   LLC PDU transmission from the remote to the local LLC and the first bit of the subsequent LLC 
@@ -53,12 +48,14 @@ namespace myApp.Drivers.Mifare.NFC.LLCP
         /// </summary>
         public static Version Version { get; } = new Version(1, 1);
         public static byte[] LLCPMagicNumber { get; } = new byte[] { 0x46, 0x66, 0x6D };
+        public int MIUX { get; set; } = 2048;
         public LinkServiceClass LSC { get; private set; } = LinkServiceClass.Class3;
         private Dictionary<int, ServiceManager> ServiceManagers { get; set; } = new Dictionary<int, ServiceManager>();
-
         private ConcurrentQueue<byte[]> Buffer { get; } = new ConcurrentQueue<byte[]>();
+        private SequenceGenerator SequenceGenerator { get; } = new SequenceGenerator();
+       
 
-        public LLCP(ILLCP chip, Data106kbpsTypeA iso14443Device)
+        public LLCP(ITranceiver chip, Data106kbpsTypeA iso14443Device)
         {
             Chip = chip;
             Iso14443Device = iso14443Device;
@@ -80,22 +77,41 @@ namespace myApp.Drivers.Mifare.NFC.LLCP
             catch (AggregateException) { }
         }
 
+        private void SendSymmReset()
+        {
+            if (LinkTimeOut <= 100)
+            {
+                LastSymmSentAt = DateTime.Now.AddMilliseconds(LinkTimeOut - 10); //Perhaps not needed but Send the SYMM 1 unit before timing out
+            }
+            else
+            {
+                LastSymmSentAt = DateTime.Now.AddMilliseconds(90);
+            }
+        }
+
         DateTime LastSymmSentAt { get; set; } = DateTime.MinValue;
         private void StartWork()
         {
             wtoken = new CancellationTokenSource();
-            task = Task.Factory.StartNew(now =>
+            int symmRetry = 0;
+            task = Task.Factory.StartNew(action =>
             {
                 ILinkManager manager = (ILinkManager)ServiceManagers[0];
-                if (manager.LinkActivation(this.Chip, Iso14443Device.TargetNumber, Version, GetSupportedWelKnownServiceList(), LinkTimeOut, LSC))
+
+                LLCPParameters paramsOut = new LLCPParameters(Version, MIUX, GetSupportedWelKnownServiceList(), LinkTimeOut, LSC);
+                LLCPParameters paramsIn;
+
+                if (manager.LinkActivation(this.Chip, Iso14443Device.TargetNumber, paramsOut, out paramsIn))
                 {
+                    SendSymmReset();
+                    Console.WriteLine("LinkActivation successful");
                     while (true)
                     {
                         if (wtoken.IsCancellationRequested) //stop is requeste break the loop and send close connection
                         {
+                            Console.WriteLine("Closing LLCP connection");
                             break;
                         }
-                        wtoken.Token.ThrowIfCancellationRequested();
                        
                         byte[] res;
                         if (Buffer.TryDequeue(out res))
@@ -108,25 +124,35 @@ namespace myApp.Drivers.Mifare.NFC.LLCP
                         {
                             if (LastSymmSentAt < DateTime.Now)
                             {
-
-                                //todo send symm and route the to the right services if data is available
-
-
-                                if (LinkTimeOut <= 100)
+                                if (manager.Symm(Chip, Iso14443Device.TargetNumber))
                                 {
-                                    LastSymmSentAt = DateTime.Now.AddMilliseconds(LinkTimeOut - 10); //Perhaps not needed but Send the SYMM 1 unit before timing out
+                                    symmRetry = 0;
+                                    Console.WriteLine("Symm");
                                 } else
-                                { 
-                                    LastSymmSentAt = DateTime.Now.AddMilliseconds(90);
+                                {
+                                    symmRetry++;
+                                    if (symmRetry > 5)
+                                    {
+                                        Console.WriteLine("Closing LLCP");
+                                        break;
+                                    }
+                                    Console.WriteLine("Symm failed");
                                 }
-
+                                SendSymmReset();
                             }
-
                         }
-
                     }
 
-                    manager.LinkDeActivation(this.Chip, Iso14443Device.TargetNumber);
+                    if (manager.LinkDeActivation(this.Chip, Iso14443Device.TargetNumber))
+                    {
+                        Console.WriteLine("Link deactivation successful");
+                    } else
+                    {
+                        Console.WriteLine("Link deactivation failed");
+                    }
+                } else
+                {
+                    Console.WriteLine("Link activation failed");
                 }
  
             }, wtoken, TaskCreationOptions.LongRunning);
@@ -139,9 +165,15 @@ namespace myApp.Drivers.Mifare.NFC.LLCP
                 if (ServiceManagers[0] is ILinkManager)
                 {
                     StartWork();
+                    return;
                 }
             }
             throw new Exception("No linkmanager configured");
+        }
+
+        public void Stop()
+        {
+            StopWork();
         }
 
         private int GetSupportedWelKnownServiceList()

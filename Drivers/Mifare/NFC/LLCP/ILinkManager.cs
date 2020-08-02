@@ -1,4 +1,5 @@
-﻿using System;
+﻿using myApp.Drivers.Mifare.NFC.LLCP.Parameters;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -6,11 +7,9 @@ namespace myApp.Drivers.Mifare.NFC.LLCP
 {
     public interface ILinkManager
     {
-        byte[] NfcId3T_TX { get; }
-        byte[] NfcId3T_RX { get; }
-        bool LinkActivation(ILLCP chip, byte targetNumber, Version llcpVersion, int wellKnownServiceList, int linkTimeOut, LinkServiceClass linkServiceClass);
-        bool LinkDeActivation(ILLCP chip, byte targetNumber);
-
+        bool LinkActivation(ITranceiver chip, byte targetNumber, LLCPParameters paramsOut, out LLCPParameters paramsIn);
+        bool LinkDeActivation(ITranceiver chip, byte targetNumber);
+        bool Symm(ITranceiver chip, byte targetNumber);
 
     }
 }

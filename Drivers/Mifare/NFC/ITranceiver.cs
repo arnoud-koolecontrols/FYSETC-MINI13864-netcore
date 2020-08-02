@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace myApp.Drivers.Mifare.NFC.LLCP
+namespace myApp.Drivers.Mifare.NFC
 {
-    public interface ILLCP
+    public interface ITranceiver
     {
         /// <summary>
         /// We need a TransmitData function for sending data without waiting for a response

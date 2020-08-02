@@ -1,6 +1,7 @@
 ﻿using Iot.Device.Card.Mifare;
 using Iot.Device.Pn5180V2;
 using Iot.Device.Rfid;
+using myApp.Drivers.Mifare.NFC.LLCP;
 using myApp.Drivers.Mifare.NFC.NFCIP1;
 using System;
 using System.Device.Gpio;
@@ -98,24 +99,15 @@ namespace myApp.Drivers.Mifare
 			}
 		}
 
-		public void ScanForTargets(int scanTimeInMilliseconds)
-		{
-			lock (Pinning.SpiLock)
-			{
-				Chip.StartNFC();
-
-			}
-		}
-
 		public bool Hold { get; set; } = false;
+		private LLCP llcp;
 		public void ScanForISO14443TypeADevices(int scanTimeInMilliseconds)
-        {
+		{
 			Data106kbpsTypeA cardTypeA;
 			// This will try to select the card for 1 second and will wait 300 milliseconds before trying again if none is found
 			bool retok = false;
 			lock (Pinning.SpiLock)
 			{
-
 
 				retok = Chip.ListenToCardIso14443TypeA(TransmitterRadioFrequencyConfiguration.Iso14443A_Nfc_PI_106_106, ReceiverRadioFrequencyConfiguration.Iso14443A_Nfc_PI_106_106, out cardTypeA, scanTimeInMilliseconds);
 
@@ -127,14 +119,19 @@ namespace myApp.Drivers.Mifare
 					Console.WriteLine($"  SAK: {cardTypeA.Sak}");
 					Console.WriteLine($"  UID: {BitConverter.ToString(cardTypeA.NfcId)}");
 
-
 					if (Nfcip1.IsNfcipCompliant(cardTypeA.Sak, cardTypeA.NfcId))
 					{
 						Console.WriteLine($"NFCIP1 compliant!!");
 						if ((cardTypeA.Sak & 0x20) == 0x20)
 						{
-							Chip.StartNFC();
-
+							Chip.OutputAllRegisters();
+							if (llcp != null)
+							{
+								llcp.Stop();
+							}
+							llcp = new LLCP(Chip, cardTypeA);
+							llcp.LinkTimeOut = 1000;
+							llcp.Start();
 						}
 					}
 					else
@@ -182,7 +179,7 @@ namespace myApp.Drivers.Mifare
 						}
 					}
 				}
-            }
+			}
 			while (Hold)
 				Thread.Sleep(100);
 		}
