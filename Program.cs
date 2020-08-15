@@ -1,11 +1,4 @@
-﻿using Drivers.Buzzer;
-using Drivers.Display;
-using Drivers.LED;
-using Iot.Device.Pn5180;
-using myApp.Drivers.Encoder;
-using myApp.Drivers.Mifare.NFC.NFCIP1;
-using System;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Threading;
 
 namespace myApp

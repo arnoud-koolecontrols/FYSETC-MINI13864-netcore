@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace myApp.Drivers.Mifare.NFC.LLCP.Parameters
+namespace Iot.Device.NFC.LLCP.Parameters
 {
     public class LLCParameterVersion : LLCPParameter
     {

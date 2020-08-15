@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace myApp.Drivers.Mifare.NFC
+namespace Iot.Device.NFC.LLCP.ServiceManagers.SNEP
 {
-    class SNEP
+    public class SNEP
     {
         //byte Version { get; set; } = 0x10; //version 1.0
         

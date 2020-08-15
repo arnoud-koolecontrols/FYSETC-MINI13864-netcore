@@ -6,7 +6,7 @@ using System.Net;
 using System.Text;
 using UnitsNet;
 
-namespace myApp.Drivers.Mifare.NFC.NFCIP1
+namespace Iot.Device.NFC.LLCP.ServiceManagers.NFCIP1
 {
    public class Nfcip1
    {
@@ -56,7 +56,7 @@ namespace myApp.Drivers.Mifare.NFC.NFCIP1
 			Nfcid_RX = new byte[10];
 		}
 
-		public bool Atr_req(INfcTranceiver chip, byte targetNumber, byte[] genBytes, out byte[] response)
+		public bool Atr_req(INfcTransceiver chip, byte targetNumber, byte[] genBytes, out byte[] response)
         {
 			response = new byte[0];
 			bool result = false;
@@ -85,7 +85,7 @@ namespace myApp.Drivers.Mifare.NFC.NFCIP1
 			return result;
         }
 
-		public bool Dsl_req(INfcTranceiver chip, byte targetNumber)
+		public bool Dsl_req(INfcTransceiver chip, byte targetNumber)
         {
 			byte[] req = DslReq();
 			Span<byte> res;
@@ -104,7 +104,7 @@ namespace myApp.Drivers.Mifare.NFC.NFCIP1
 			return false;
 		}
 
-		public bool Dep_req(INfcTranceiver chip, byte targetNumber, PfbTypes type, byte[] payload, out byte[] response)
+		public bool Dep_req(INfcTransceiver chip, byte targetNumber, PfbTypes type, byte[] payload, out byte[] response)
 		{
 			byte pni = PniGenerator.PNI;
 			byte pfb = (byte)(((int)type << 5 ) | pni);

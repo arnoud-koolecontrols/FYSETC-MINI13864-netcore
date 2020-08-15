@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace myApp.Drivers.Mifare.NFC.NFCIP1
+namespace Iot.Device.NFC.LLCP.ServiceManagers.NFCIP1
 {
     public class PniGenerator
     {

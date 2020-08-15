@@ -1,9 +1,6 @@
-﻿using myApp.Drivers.Mifare.NFC.LLCP.Parameters;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Iot.Device.NFC.LLCP.Parameters;
 
-namespace myApp.Drivers.Mifare.NFC.LLCP.ServiceManagers
+namespace Iot.Device.NFC.LLCP.ServiceManagers
 {
     public class ServiceManager
     {

@@ -1,9 +1,6 @@
-﻿using myApp.Drivers.Mifare.NFC.LLCP.Parameters;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Iot.Device.NFC.LLCP.Parameters;
 
-namespace myApp.Drivers.Mifare.NFC.LLCP
+namespace Iot.Device.NFC.LLCP
 {
     public interface ILinkManager
     {
@@ -15,7 +12,7 @@ namespace myApp.Drivers.Mifare.NFC.LLCP
         /// the default link timeout value is 100 milliseconds
         /// </summary>
         int LinkTimeOut { get; set; }
-        INfcTranceiver Chip { get; set; }
+        INfcTransceiver Chip { get; set; }
         byte TargetNumber { get; set; }
 
         bool LinkActivation(LLCPParameters paramsOut, out LLCPParameters paramsIn);

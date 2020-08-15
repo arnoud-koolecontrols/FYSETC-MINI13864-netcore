@@ -1,10 +1,6 @@
-﻿using myApp.Drivers.Mifare.NFC.LLCP.Parameters;
-using System;
-using System.Collections.Generic;
-using System.Dynamic;
-using System.Text;
+﻿using System;
 
-namespace myApp.Drivers.Mifare.NFC.LLCP.Parameters
+namespace Iot.Device.NFC.LLCP.Parameters
 {
     public class LLCPParameters
     {

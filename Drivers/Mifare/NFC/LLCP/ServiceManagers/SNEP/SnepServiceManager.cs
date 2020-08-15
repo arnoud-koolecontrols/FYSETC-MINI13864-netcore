@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace myApp.Drivers.Mifare.NFC.LLCP.ServiceManagers
+namespace Iot.Device.NFC.LLCP.ServiceManagers.SNEP
 {
     public class SnepServiceManager : ServiceManager
     {

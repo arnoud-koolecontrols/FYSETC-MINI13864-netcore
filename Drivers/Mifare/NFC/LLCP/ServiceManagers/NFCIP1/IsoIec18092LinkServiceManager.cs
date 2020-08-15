@@ -1,16 +1,12 @@
-﻿using myApp.Drivers.Mifare.NFC.LLCP.Parameters;
-using myApp.Drivers.Mifare.NFC.NFCIP1;
+﻿using Iot.Device.NFC.LLCP.Parameters;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
 
-namespace myApp.Drivers.Mifare.NFC.LLCP.ServiceManagers
+namespace Iot.Device.NFC.LLCP.ServiceManagers.NFCIP1
 {
     public class IsoIec18092LinkServiceManager : ServiceManager, ILinkManager
     {
         public int LinkTimeOut { get; set; } = 100;
-        public INfcTranceiver Chip { get; set; }
+        public INfcTransceiver Chip { get; set; }
         public byte TargetNumber { get; set; }
         private Nfcip1 Nfcip1 { get; } = new Nfcip1();
 

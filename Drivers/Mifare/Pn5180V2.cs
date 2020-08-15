@@ -10,15 +10,11 @@ using System.Device.Spi;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
-using Iot.Device.Bno055;
 using Iot.Device.Card;
 using Iot.Device.Card.Mifare;
+using Iot.Device.NFC;
 using Iot.Device.Rfid;
-using myApp.Drivers.Mifare.NFC;
-using myApp.Drivers.Mifare.NFC.LLCP;
-using myApp.Drivers.Mifare.NFC.NFCIP1;
 
 namespace Iot.Device.Pn5180V2
 {
@@ -26,7 +22,8 @@ namespace Iot.Device.Pn5180V2
     /// A PN5180 class offering RFID and NFC functionalities. Implement the CardTransceiver class to
     /// allow Mifare, Credit Card support
     /// </summary>
-    public class Pn5180 : CardTransceiver, IDisposable, INfcTranceiver
+    //public class Pn5180 : CardTransceiver, IDisposable, INfcTranceiver
+    public class Pn5180 : NfcTransceiver, IDisposable
     {
         private const int TimeoutWaitingMilliseconds = 2_000;
 
@@ -984,7 +981,8 @@ namespace Iot.Device.Pn5180V2
 
         #region NFC
 
-        public int TransmitData(byte targetNumber, ReadOnlySpan<byte> dataToSend)
+        //public int TransmitData(byte targetNumber, ReadOnlySpan<byte> dataToSend)
+        public override int TransmitData(byte targetNumber, ReadOnlySpan<byte> dataToSend)
         {
             if (targetNumber == 0)
             {
@@ -1013,7 +1011,8 @@ namespace Iot.Device.Pn5180V2
             return -1;
         }
 
-        public bool DataReceived(byte targetNumber)
+        //public bool DataReceived(byte targetNumber)
+        public override bool DataReceived(byte targetNumber)
         {
             if (targetNumber == 0)
             {
@@ -1024,7 +1023,8 @@ namespace Iot.Device.Pn5180V2
             return false;
         }
 
-        public int ReceiveData(byte targetNumber, out Span<byte> dataToReceive, int timeOutInMilliSeconds)
+        //public int ReceiveData(byte targetNumber, out Span<byte> dataToReceive, int timeOutInMilliSeconds)
+        public override int ReceiveData(byte targetNumber, out Span<byte> dataToReceive, int timeOutInMilliSeconds)
         {
             dataToReceive = new byte[0];
             if (targetNumber == 0)
@@ -1050,9 +1050,10 @@ namespace Iot.Device.Pn5180V2
                 return numBytes;
             }
             return -1;
-        } 
+        }
 
-        public int Transceive(byte targetNumber, ReadOnlySpan<byte> dataToSend, out Span<byte> dataFromCard, int timeOutInMilliSeconds)
+        //public int Transceive(byte targetNumber, ReadOnlySpan<byte> dataToSend, out Span<byte> dataFromCard, int timeOutInMilliSeconds)
+        public override int Transceive(byte targetNumber, ReadOnlySpan<byte> dataToSend, out Span<byte> dataFromCard, int timeOutInMilliSeconds)
         {
             int result = -1;
             dataFromCard = new byte[0];

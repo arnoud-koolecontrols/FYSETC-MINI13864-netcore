@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace myApp.Drivers.Mifare.NFC.LLCP
+namespace Iot.Device.NFC.LLCP
 {
     public class SequenceGenerator
     {

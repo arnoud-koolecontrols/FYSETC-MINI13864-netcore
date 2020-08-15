@@ -1,9 +1,9 @@
 ﻿using Iot.Device.Card.Mifare;
+using Iot.Device.NFC.LLCP;
+using Iot.Device.NFC.LLCP.ServiceManagers.NFCIP1;
+using Iot.Device.NFC.LLCP.ServiceManagers.SNEP;
 using Iot.Device.Pn5180V2;
 using Iot.Device.Rfid;
-using myApp.Drivers.Mifare.NFC.LLCP;
-using myApp.Drivers.Mifare.NFC.LLCP.ServiceManagers;
-using myApp.Drivers.Mifare.NFC.NFCIP1;
 using System;
 using System.Device.Gpio;
 using System.Device.Spi;
