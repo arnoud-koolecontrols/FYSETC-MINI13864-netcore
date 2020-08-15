@@ -8,7 +8,7 @@ namespace myApp.Drivers.Mifare.NFC
     {
         //byte Version { get; set; } = 0x10; //version 1.0
         
-        public static byte[] Request(byte[] payload)
+        public static byte[] Put(byte[] payload)
         {
             byte[] result = new byte[payload.Length +6];
             int length = payload.Length;

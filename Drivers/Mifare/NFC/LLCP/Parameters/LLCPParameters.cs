@@ -18,6 +18,40 @@ namespace myApp.Drivers.Mifare.NFC.LLCP.Parameters
         public LLCParameterServiceDiscoveryRequest ServiceDiscoveryRequest { get; private set; } = null;
         public LLCParameterServiceDiscoveryResponse ServiceDiscoveryResponse { get; private set; } = null;
 
+        public void SetMiux(int miux)
+        {
+            MIUX = new LLCParameterMiux(miux);
+        }
+        public void SetVersion(Version version)
+        {
+            Version = new LLCParameterVersion(version);
+        }
+
+        public void SetWellKnownServiceList(int wellKnownServiceList)
+        {
+            WellKnownServiceList = new LLCParameterWellKnownServiceList(wellKnownServiceList);
+        }
+
+        public void SetLinkTimeOut(int linkTimeOut)
+        {
+            LinkTimeOut = new LLCParameterLinkTimeOut(linkTimeOut);
+        }
+
+        public void SetOption(LinkServiceClass linkServiceClass)
+        {
+            Option = new LLCParameterOption(linkServiceClass);
+        }
+
+        public void SetServiceName(string serviceName)
+        {
+            ServiceName = new LLCParameterServiceName(serviceName);
+        }
+
+        public void SetReceiveWindowSize(int receiveWindow)
+        {
+            ReceiveWindowSize = new LLCParameterReceiveWindowSize(receiveWindow);
+        }
+
         public LLCPParameters()
         {
 
@@ -25,11 +59,11 @@ namespace myApp.Drivers.Mifare.NFC.LLCP.Parameters
 
         public LLCPParameters(Version version, int miux, int wellKnownServiceList, int linkTimeOut, LinkServiceClass linkServiceClass)
         {
-            Version = new LLCParameterVersion(version);
-            MIUX = new LLCParameterMiux(miux);
-            WellKnownServiceList = new LLCParameterWellKnownServiceList(wellKnownServiceList);
-            LinkTimeOut = new LLCParameterLinkTimeOut(linkTimeOut);
-            Option = new LLCParameterOption(linkServiceClass);
+            SetVersion(version);
+            SetMiux(miux);
+            SetWellKnownServiceList(wellKnownServiceList);
+            SetLinkTimeOut(linkTimeOut);
+            SetOption(linkServiceClass);
         }
 
         private byte[] AddParameterToArray(byte[] part1, LLCPParameter parameter)
@@ -38,6 +72,46 @@ namespace myApp.Drivers.Mifare.NFC.LLCP.Parameters
             byte[] result = new byte[part1.Length + parData.Length];
             part1.CopyTo(result, 0);
             parData.CopyTo(result, part1.Length);
+            return result;
+        }
+
+        public byte[] GetParams()
+        {
+            byte[] result = new byte[0];
+            if (Version != null)
+            {
+                result = AddParameterToArray(result, Version);
+            }
+
+            if (ReceiveWindowSize != null)
+            {
+                result = AddParameterToArray(result, ReceiveWindowSize);
+            }
+
+            if (MIUX != null)
+            {
+                result = AddParameterToArray(result, MIUX);
+            }
+
+            if (WellKnownServiceList != null)
+            {
+                result = AddParameterToArray(result, WellKnownServiceList);
+            }
+
+            if (LinkTimeOut != null)
+            {
+                result = AddParameterToArray(result, LinkTimeOut);
+            }
+
+            if (Option != null)
+            {
+                result = AddParameterToArray(result, Option);
+            }
+
+            if (ServiceName != null)
+            {
+                result = AddParameterToArray(result, ServiceName);
+            }
             return result;
         }
 

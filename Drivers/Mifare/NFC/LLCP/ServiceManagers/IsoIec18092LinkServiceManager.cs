@@ -9,17 +9,24 @@ namespace myApp.Drivers.Mifare.NFC.LLCP.ServiceManagers
 {
     public class IsoIec18092LinkServiceManager : ServiceManager, ILinkManager
     {
-
+        public int LinkTimeOut { get; set; } = 100;
+        public INfcTranceiver Chip { get; set; }
+        public byte TargetNumber { get; set; }
         private Nfcip1 Nfcip1 { get; } = new Nfcip1();
 
-        public bool LinkActivation(ITranceiver chip, byte targetNumber, LLCPParameters paramsOut, out LLCPParameters paramsIn)
+        public IsoIec18092LinkServiceManager() : base(null)
+        {
+            this.SSAP = (byte)WelKnownServiceAccessPoints.LLCLinkManagementService;
+        }
+
+        public bool LinkActivation(LLCPParameters paramsOut, out LLCPParameters paramsIn)
         {
             paramsIn = new LLCPParameters();
             byte[] payload = paramsOut.GetMagicHeader();
             byte[] reply = new byte[0];
             Nfcip1.Reset();
             Console.WriteLine("Sending ATR_REQ");
-            if (Nfcip1.Atr_req(chip, targetNumber, payload, out reply))
+            if (Nfcip1.Atr_req(Chip, TargetNumber, payload, out reply))
             {
                 Console.WriteLine("ATR_RES received checking magic header");
                 if (reply.Length > 3)
@@ -36,24 +43,51 @@ namespace myApp.Drivers.Mifare.NFC.LLCP.ServiceManagers
             return false;
         }
 
-        public bool LinkDeActivation(ITranceiver chip, byte targetNumber)
+        public bool LinkDeActivation()
         {
-            if (Nfcip1.Dsl_req(chip, targetNumber))
+            if (Nfcip1.Dsl_req(Chip, TargetNumber))
             {
                 return true;
             }
             return false;
         }
 
-        public bool Symm(ITranceiver chip, byte targetNumber)
+        public bool Tranceive(byte[] dataToSend, out byte[] dataToReceive)
         {
-            byte[] reply = new byte[0];
-            if (Nfcip1.Dep_req(chip, targetNumber,Nfcip1.PfbTypes.Information, new byte[] { 0, 0 }, out reply))
+            if (Nfcip1.Dep_req(Chip, TargetNumber, Nfcip1.PfbTypes.Information, dataToSend, out dataToReceive))
             {
+                ResetSendSymmDelay();
                 return true;
             }
             return false;
         }
 
+        DateTime DataSentAt { get; set; } = DateTime.MinValue;
+
+        private void ResetSendSymmDelay()
+        {
+            if (LinkTimeOut <= 100)
+            {
+                DataSentAt = DateTime.Now.AddMilliseconds(LinkTimeOut - 10); //Perhaps not needed but Send the SYMM 1 unit before timing out
+            }
+            else
+            {
+                DataSentAt = DateTime.Now.AddMilliseconds(90);
+            }
+        } 
+
+        public bool Symm()
+        {
+            bool result = true;
+            if (DataSentAt < DateTime.Now)
+            {
+                byte[] reply = new byte[0];
+                if (! Tranceive(new byte[] { 0, 0 }, out reply))
+                {
+                    result = false;
+                }
+            }
+            return result;
+        }
     }
 }

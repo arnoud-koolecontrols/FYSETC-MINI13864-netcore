@@ -2,6 +2,7 @@
 using Iot.Device.Pn5180V2;
 using Iot.Device.Rfid;
 using myApp.Drivers.Mifare.NFC.LLCP;
+using myApp.Drivers.Mifare.NFC.LLCP.ServiceManagers;
 using myApp.Drivers.Mifare.NFC.NFCIP1;
 using System;
 using System.Device.Gpio;
@@ -130,7 +131,7 @@ namespace myApp.Drivers.Mifare
 								llcp.Stop();
 							}
 							llcp = new LLCP(Chip, cardTypeA);
-							llcp.LinkTimeOut = 1000;
+                            llcp.ConnectionChanged += Llcp_ConnectionChanged;
 							llcp.Start();
 						}
 					}
@@ -183,5 +184,34 @@ namespace myApp.Drivers.Mifare
 			while (Hold)
 				Thread.Sleep(100);
 		}
-	}
+
+        private void Llcp_ConnectionChanged(object sender, LLCPLinkActivatedEventArgs e)
+        {
+            if (e.Connected)
+            {
+				lock (Pinning.SpiLock)
+				{
+					Console.WriteLine("LLCP open");
+					LLCP llcp = (LLCP)sender;
+					SnepServiceManager snepServiceManager = llcp.SnepServiceManager;
+					if (snepServiceManager != null)
+					{
+						Console.WriteLine("Snep service found");
+						NdefLibrary.Ndef.NdefMessage message = new NdefLibrary.Ndef.NdefMessage();
+						NdefLibrary.Ndef.NdefUriRecord uriRecord = new NdefLibrary.Ndef.NdefUriRecord();
+						uriRecord.Uri = "http://www.koolecontrols.nl";
+						//NdefLibrary.Ndef.NdefTextRecord textRecord = new NdefLibrary.Ndef.NdefTextRecord();
+						//textRecord.LanguageCode = "en";
+						//textRecord.Text = "Wat een geweldige test is dit";
+						message.Add(uriRecord);
+						byte[] ndef = message.ToByteArray();
+						snepServiceManager.SendNdefMessage(ndef);
+					}
+				}
+			} else
+            {
+				Console.WriteLine("LLCP closed");
+            }
+        }
+    }
 }

@@ -20,7 +20,7 @@ namespace myApp.Drivers.Mifare.NFC.LLCP.Parameters
             if (this.data.Length >= 4)
             {
                 int miux = data[3];
-                miux += (data[2] & 0x3) << 8;
+                miux += (data[2] & 0x7) << 8;
                 return miux;
             }
             return 128;
@@ -39,7 +39,7 @@ namespace myApp.Drivers.Mifare.NFC.LLCP.Parameters
             byte[] result = new byte[4];
             result[0] = (byte)LLCParameterType.MIUX;
             result[1] = 2; // length
-            result[2] = (byte)((miux >> 8) & 0x3);
+            result[2] = (byte)((miux >> 8) & 0x7);
             result[3] = (byte)(miux & 0xFF);
             return result;
         }

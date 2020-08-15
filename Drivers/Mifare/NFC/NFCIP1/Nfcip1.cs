@@ -56,13 +56,13 @@ namespace myApp.Drivers.Mifare.NFC.NFCIP1
 			Nfcid_RX = new byte[10];
 		}
 
-		public bool Atr_req(ITranceiver chip, byte targetNumber, byte[] genBytes, out byte[] response)
+		public bool Atr_req(INfcTranceiver chip, byte targetNumber, byte[] genBytes, out byte[] response)
         {
 			response = new byte[0];
 			bool result = false;
 			byte[] req = AtrReq(NfcidGenerator.Nfcid, genBytes);
 			Span<byte> res;
-			if (chip.TransmitData(targetNumber, req, 10) >= 0)
+			if (chip.TransmitData(targetNumber, req) >= 0)
 			{
 				if (chip.ReceiveData(targetNumber, out res, 10) >= 0)
 				{
@@ -85,11 +85,11 @@ namespace myApp.Drivers.Mifare.NFC.NFCIP1
 			return result;
         }
 
-		public bool Dsl_req(ITranceiver chip, byte targetNumber)
+		public bool Dsl_req(INfcTranceiver chip, byte targetNumber)
         {
 			byte[] req = DslReq();
 			Span<byte> res;
-			if (chip.TransmitData(targetNumber, req, 2) >= 0)
+			if (chip.TransmitData(targetNumber, req) >= 0)
 			{
 				if (chip.ReceiveData(targetNumber, out res, 10) >= 0)
 				{
@@ -104,7 +104,7 @@ namespace myApp.Drivers.Mifare.NFC.NFCIP1
 			return false;
 		}
 
-		public bool Dep_req(ITranceiver chip, byte targetNumber, PfbTypes type, byte[] payload, out byte[] response)
+		public bool Dep_req(INfcTranceiver chip, byte targetNumber, PfbTypes type, byte[] payload, out byte[] response)
 		{
 			byte pni = PniGenerator.PNI;
 			byte pfb = (byte)(((int)type << 5 ) | pni);
@@ -115,7 +115,7 @@ namespace myApp.Drivers.Mifare.NFC.NFCIP1
 			response = new byte[0];
 			byte[] req = DepReq(pfb, payload);
 			Span<byte> res;
-			if (chip.TransmitData(targetNumber, req, 15) >= 0)
+			if (chip.TransmitData(targetNumber, req) >= 0)
 			{
 				if (chip.ReceiveData(targetNumber, out res, 100) >= 0)
 				{
