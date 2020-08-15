@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Iot.Device.NFC
+namespace Iot.Device.Nfc
 {
     public interface INfcTransceiver
     {

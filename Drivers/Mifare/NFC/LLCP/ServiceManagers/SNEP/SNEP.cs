@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Iot.Device.NFC.LLCP.ServiceManagers.SNEP
+namespace Iot.Device.Nfc.LLCP.ServiceManagers.SNEP
 {
     public class SNEP
     {

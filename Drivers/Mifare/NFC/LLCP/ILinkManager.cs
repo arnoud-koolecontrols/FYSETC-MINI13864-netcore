@@ -1,6 +1,6 @@
-﻿using Iot.Device.NFC.LLCP.Parameters;
+﻿using Iot.Device.Nfc.LLCP.Parameters;
 
-namespace Iot.Device.NFC.LLCP
+namespace Iot.Device.Nfc.LLCP
 {
     public interface ILinkManager
     {

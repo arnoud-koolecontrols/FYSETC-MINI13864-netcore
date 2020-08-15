@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Iot.Device.NFC.LLCP.Parameters
+﻿
+namespace Iot.Device.Nfc.LLCP.Parameters
 {
     public class LLCParameterWellKnownServiceList : LLCPParameter
     {

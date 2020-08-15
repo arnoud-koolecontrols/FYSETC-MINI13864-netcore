@@ -13,7 +13,7 @@ using System.Linq;
 using System.Threading;
 using Iot.Device.Card;
 using Iot.Device.Card.Mifare;
-using Iot.Device.NFC;
+using Iot.Device.Nfc;
 using Iot.Device.Rfid;
 
 namespace Iot.Device.Pn5180V2
@@ -979,9 +979,8 @@ namespace Iot.Device.Pn5180V2
 
         #endregion
 
-        #region NFC
+        #region Nfc
 
-        //public int TransmitData(byte targetNumber, ReadOnlySpan<byte> dataToSend)
         public override int TransmitData(byte targetNumber, ReadOnlySpan<byte> dataToSend)
         {
             if (targetNumber == 0)
@@ -1011,7 +1010,6 @@ namespace Iot.Device.Pn5180V2
             return -1;
         }
 
-        //public bool DataReceived(byte targetNumber)
         public override bool DataReceived(byte targetNumber)
         {
             if (targetNumber == 0)
@@ -1023,7 +1021,6 @@ namespace Iot.Device.Pn5180V2
             return false;
         }
 
-        //public int ReceiveData(byte targetNumber, out Span<byte> dataToReceive, int timeOutInMilliSeconds)
         public override int ReceiveData(byte targetNumber, out Span<byte> dataToReceive, int timeOutInMilliSeconds)
         {
             dataToReceive = new byte[0];
@@ -1052,7 +1049,6 @@ namespace Iot.Device.Pn5180V2
             return -1;
         }
 
-        //public int Transceive(byte targetNumber, ReadOnlySpan<byte> dataToSend, out Span<byte> dataFromCard, int timeOutInMilliSeconds)
         public override int Transceive(byte targetNumber, ReadOnlySpan<byte> dataToSend, out Span<byte> dataFromCard, int timeOutInMilliSeconds)
         {
             int result = -1;

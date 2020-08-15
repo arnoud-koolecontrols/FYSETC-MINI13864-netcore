@@ -1,7 +1,7 @@
-﻿using Iot.Device.NFC.LLCP.Parameters;
-using Iot.Device.NFC.LLCP.ServiceManagers;
-using Iot.Device.NFC.LLCP.ServiceManagers.NFCIP1;
-using Iot.Device.NFC.LLCP.ServiceManagers.SNEP;
+﻿using Iot.Device.Nfc.LLCP.Parameters;
+using Iot.Device.Nfc.LLCP.ServiceManagers;
+using Iot.Device.Nfc.LLCP.ServiceManagers.NFCIP1;
+using Iot.Device.Nfc.LLCP.ServiceManagers.SNEP;
 using Iot.Device.Rfid;
 using System;
 using System.Collections.Concurrent;
@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Iot.Device.NFC.LLCP
+namespace Iot.Device.Nfc.LLCP
 {
     public class LLCP
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Iot.Device.NFC.LLCP.Parameters
+namespace Iot.Device.Nfc.LLCP.Parameters
 {
     public class LLCPParameters
     {

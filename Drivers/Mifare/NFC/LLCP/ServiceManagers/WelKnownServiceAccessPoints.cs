@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Iot.Device.NFC.LLCP.ServiceManagers
+namespace Iot.Device.Nfc.LLCP.ServiceManagers
 {
     public enum WelKnownServiceAccessPoints
     {

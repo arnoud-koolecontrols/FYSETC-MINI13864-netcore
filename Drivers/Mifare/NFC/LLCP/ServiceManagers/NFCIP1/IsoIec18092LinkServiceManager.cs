@@ -1,7 +1,7 @@
-﻿using Iot.Device.NFC.LLCP.Parameters;
+﻿using Iot.Device.Nfc.LLCP.Parameters;
 using System;
 
-namespace Iot.Device.NFC.LLCP.ServiceManagers.NFCIP1
+namespace Iot.Device.Nfc.LLCP.ServiceManagers.NFCIP1
 {
     public class IsoIec18092LinkServiceManager : ServiceManager, ILinkManager
     {

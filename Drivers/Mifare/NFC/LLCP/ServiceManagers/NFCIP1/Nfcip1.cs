@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Linq;
-using System.Net;
-using System.Text;
-using UnitsNet;
 
-namespace Iot.Device.NFC.LLCP.ServiceManagers.NFCIP1
+namespace Iot.Device.Nfc.LLCP.ServiceManagers.NFCIP1
 {
    public class Nfcip1
    {
