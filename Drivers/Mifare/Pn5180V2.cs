@@ -13,16 +13,15 @@ using System.Linq;
 using System.Threading;
 using Iot.Device.Card;
 using Iot.Device.Card.Mifare;
-using Iot.Device.Nfc;
 using Iot.Device.Rfid;
+using Iot.Device.Nfc;
 
 namespace Iot.Device.Pn5180V2
 {
     /// <summary>
-    /// A PN5180 class offering RFID and NFC functionalities. Implement the CardTransceiver class to
-    /// allow Mifare, Credit Card support
+    /// A PN5180 class offering RFID and NFC functionalities. Implement the NfcTransceiver class to
+    /// allow Mifare, Credit Card support and nfc p2p support
     /// </summary>
-    //public class Pn5180 : CardTransceiver, IDisposable, INfcTranceiver
     public class Pn5180 : NfcTransceiver, IDisposable
     {
         private const int TimeoutWaitingMilliseconds = 2_000;
@@ -979,6 +978,7 @@ namespace Iot.Device.Pn5180V2
 
         #endregion
 
+
         #region Nfc
 
         public override int TransmitData(byte targetNumber, ReadOnlySpan<byte> dataToSend)
@@ -1002,11 +1002,14 @@ namespace Iot.Device.Pn5180V2
                         LogInfo.Log($"{DateTime.Now.ToString("HH:mm:ss.fff")} TransmitData timeout", LogLevel.Debug);
                         return -1;
                     }
+
                     Thread.Sleep(1);
-                    SpiReadRegister(Register.IRQ_STATUS, status);        
+                    SpiReadRegister(Register.IRQ_STATUS, status);
                 }
+
                 return 0;
             }
+
             return -1;
         }
 
@@ -1018,6 +1021,7 @@ namespace Iot.Device.Pn5180V2
                 SpiReadRegister(Register.IRQ_STATUS, status);
                 return ((status[0] & 0x01) == 0x01);
             }
+
             return false;
         }
 
@@ -1027,17 +1031,19 @@ namespace Iot.Device.Pn5180V2
             if (targetNumber == 0)
             {
                 DateTime dtTimeout = DateTime.Now.AddMilliseconds(timeOutInMilliSeconds);
-                while (! DataReceived(targetNumber))
+                while (!DataReceived(targetNumber))
                 {
                     if (dtTimeout <= DateTime.Now)
                     {
                         LogInfo.Log($"{DateTime.Now.ToString("HH:mm:ss.fff")} ReceiveData timeout", LogLevel.Debug);
                         return -1;
                     }
+
                     Thread.Sleep(1);
                 }
+
                 // Clear RX_IRQ_STAT
-                SpiWriteRegister(Command.WRITE_REGISTER, Register.IRQ_CLEAR, new byte[] { 0x01, 0x00, 0x00, 0x00 });    
+                SpiWriteRegister(Command.WRITE_REGISTER, Register.IRQ_CLEAR, new byte[] { 0x01, 0x00, 0x00, 0x00 });
                 int numBytes;
                 (numBytes, _) = GetNumberOfBytesReceivedAndValidBits();
                 dataToReceive = new byte[numBytes];
@@ -1045,9 +1051,11 @@ namespace Iot.Device.Pn5180V2
                 {
                     ReadDataFromCard(dataToReceive);
                 }
+
                 LogInfo.Log($"{DateTime.Now.ToString("HH:mm:ss.fff")} dataReceived: {BitConverter.ToString(dataToReceive.ToArray())}", LogLevel.Debug);
                 return numBytes;
             }
+
             return -1;
         }
 
@@ -1072,18 +1080,19 @@ namespace Iot.Device.Pn5180V2
                     if (result >= 0)
                     {
                         return ReceiveData(targetNumber, out dataFromCard, timeOutInMilliSeconds);
-                    }                  
+                    }
                 }
+
             }
             else
             {
                 //other stuff not supported yett
             }
+
             return result;
         }
 
         #endregion
-
 
         #region Listen to cards
 
@@ -1159,11 +1168,15 @@ namespace Iot.Device.Pn5180V2
                     // NVB = Number of valid bits
                     uidSak[1] = 0x20;
                     SendDataToCard(uidSak.Slice(0, 2));
+                    // Check if 5 bytes are received, we can't proceed if we did not receive 5 bytes.
                     (numBytes, _) = GetNumberOfBytesReceivedAndValidBits();
                     if (numBytes != 5)
                     {
-                        return false;   //this will prevent a hangup
+                        // This can happen if a card is pulled out of the field
+                        LogInfo.Log($"SAK length not 5", LogLevel.Debug);
+                        return false;
                     }
+
                     // Read 5 bytes sak. Byte 1 will tell us if we have the full UID or if we need to read more
                     ReadDataFromCard(sakInterm.Slice(0, 5));
                     // Switches back on the CRC off in RX and TX direction
