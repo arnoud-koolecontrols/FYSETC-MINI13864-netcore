@@ -981,6 +981,7 @@ namespace Iot.Device.Pn5180V2
 
         #region Nfc
 
+        /// <inheritdoc/>
         public override int TransmitData(byte targetNumber, ReadOnlySpan<byte> dataToSend)
         {
             if (targetNumber == 0)
@@ -989,7 +990,6 @@ namespace Iot.Device.Pn5180V2
                 // Clears all interrupt
                 SpiWriteRegister(Command.WRITE_REGISTER, Register.IRQ_CLEAR, new byte[] { 0xFF, 0xFF, 0x0F, 0x00 });
                 bool ret = SendDataToCard(dataToSend.ToArray());
-                //we probably should calculate the timeout
                 // 10 etu needed for 1 byte, 1 etu = 9.4 µs, so about 100 µs are needed to transfer 1 character
                 int timeout = (dataToSend.Length / 10) + 1;
                 DateTime dtTimeout = DateTime.Now.AddMilliseconds(timeout);
@@ -1013,6 +1013,7 @@ namespace Iot.Device.Pn5180V2
             return -1;
         }
 
+        /// <inheritdoc/>
         public override bool DataReceived(byte targetNumber)
         {
             if (targetNumber == 0)
@@ -1025,6 +1026,7 @@ namespace Iot.Device.Pn5180V2
             return false;
         }
 
+        /// <inheritdoc/>
         public override int ReceiveData(byte targetNumber, out Span<byte> dataToReceive, int timeOutInMilliSeconds)
         {
             dataToReceive = new byte[0];
@@ -1059,6 +1061,7 @@ namespace Iot.Device.Pn5180V2
             return -1;
         }
 
+        /// <inheritdoc/>
         public override int Transceive(byte targetNumber, ReadOnlySpan<byte> dataToSend, out Span<byte> dataFromCard, int timeOutInMilliSeconds)
         {
             int result = -1;
@@ -1086,7 +1089,7 @@ namespace Iot.Device.Pn5180V2
             }
             else
             {
-                //other stuff not supported yett
+                // Type B not supported yet
             }
 
             return result;
@@ -1135,7 +1138,7 @@ namespace Iot.Device.Pn5180V2
                     // Clears all interrupt
                     SpiWriteRegister(Command.WRITE_REGISTER, Register.IRQ_CLEAR, new byte[] { 0xFF, 0xFF, 0x0F, 0x00 });
                     // Sets the PN5180 into IDLE state
-                    SpiWriteRegister(Command.WRITE_REGISTER_AND_MASK, Register.SYSTEM_CONFIG, new byte[] { 0xB8, 0xFF, 0xFF, 0xFF });
+                    SpiWriteRegister(Command.WRITE_REGISTER_AND_MASK, Register.SYSTEM_CONFIG, new byte[] { 0xB0, 0xFF, 0xFF, 0xFF });
                     // Activates TRANSCEIVE routine
                     SpiWriteRegister(Command.WRITE_REGISTER_OR_MASK, Register.SYSTEM_CONFIG, new byte[] { 0x03, 0x00, 0x00, 0x00 });
                     // Sends REQB command

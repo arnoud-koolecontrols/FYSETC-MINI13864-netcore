@@ -109,7 +109,7 @@ namespace myApp.Drivers.Mifare
 			bool retok = false;
 			lock (Pinning.SpiLock)
 			{
-
+				Chip.OutputAllRegisters();
 				retok = Chip.ListenToCardIso14443TypeA(TransmitterRadioFrequencyConfiguration.Iso14443A_Nfc_PI_106_106, ReceiverRadioFrequencyConfiguration.Iso14443A_Nfc_PI_106_106, out cardTypeA, scanTimeInMilliseconds);
 
 				if (retok)
@@ -125,7 +125,7 @@ namespace myApp.Drivers.Mifare
 						Console.WriteLine($"NFCIP1 compliant!!");
 						if ((cardTypeA.Sak & 0x20) == 0x20)
 						{
-							Chip.OutputAllRegisters();
+							
 							if (llcp != null)
 							{
 								llcp.Stop();
