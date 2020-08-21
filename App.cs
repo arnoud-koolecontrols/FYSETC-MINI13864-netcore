@@ -98,8 +98,8 @@ namespace myApp
                 A0 = 7,
                 CS = 0, //note this is not the pin but the /dev/spi1.x
                 SpiBus = 1,
-				SpiLock = spiLock,
-			};
+                SpiLock = spiLock,
+            };
             Display = new ST7567(displayPinning, 128, 64);
 
             PN5180.PN5180Pinning pn5180Pinning = new PN5180.PN5180Pinning()
@@ -110,7 +110,7 @@ namespace myApp
                 //IRQ = 18,
                 CS = 1, //note this is not the pin but the /dev/spi1.x
                 SpiBus = 1,
-				SpiLock = spiLock,
+                SpiLock = spiLock,
             };
             Mifare = new PN5180(pn5180Pinning);
 
@@ -122,25 +122,25 @@ namespace myApp
 			};
 			RgbLed = new RgbLed(rgbLedPinning);
 
-			DigitalEncoder.DigitalEncoderPinning digitalEncoderPinning = new DigitalEncoder.DigitalEncoderPinning()
-			{
-				Enc0 = 12,
-				Enc1 = 198,
-				Enc2 = 199
-			};
-			DigitalEncoder = new DigitalEncoder(digitalEncoderPinning);
-			DigitalEncoder.Pushed += DigitalEncoder_Pushed;
+            DigitalEncoder.DigitalEncoderPinning digitalEncoderPinning = new DigitalEncoder.DigitalEncoderPinning()
+            {
+                Enc0 = 12,
+                Enc1 = 198,
+                Enc2 = 199
+            };
+            DigitalEncoder = new DigitalEncoder(digitalEncoderPinning);
+            DigitalEncoder.Pushed += DigitalEncoder_Pushed;
             DigitalEncoder.Releashed += DigitalEncoder_Releashed;
-			DigitalEncoder.Right += DigitalEncoder_Right;
-			DigitalEncoder.Left += DigitalEncoder_Left;
+            DigitalEncoder.Right += DigitalEncoder_Right;
+            DigitalEncoder.Left += DigitalEncoder_Left;
 
             Buzzer.BuzzerPinning buzzerPinning = new Buzzer.BuzzerPinning()
             {
-				BuzzerPin = 6, //PA6
+                BuzzerPin = 6, //PA6
             };
             Buzzer = new Buzzer(buzzerPinning);
 
-			UpdateScreen();
+            UpdateScreen();
 		}
 
         private void DigitalEncoder_Releashed(object sender, EventArgs e)
