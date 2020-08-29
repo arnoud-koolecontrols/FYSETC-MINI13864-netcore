@@ -1189,41 +1189,37 @@ namespace Iot.Device.Pn5180V2
                     // Add the previous elements to this last anticollision to send
                     sakInterm.Slice(0, 5).CopyTo(uidSak.Slice(2));
                     ret &= SendDataToCard(uidSak);
-
                     ret &= ReadDataFromCard(sak, sak.Length);
                     if (!ret)
                     {
                         return false;
                     }
-
                     card.Sak = sak[0];
-                    if (((sak[0] & 0b0000_0100) == 0) && (i == 0))
-                    {
-                        // If the bit 3 is 0, then it's only a 4 bytes UID
-                        uidSak.Slice(2, 4).CopyTo(uid);
-                        card.NfcId = uid.Slice(0, 4).ToArray();
-                        return true;
-                    }
-                    else if (((atqa[0] & 0b1100_0000) == 0b01000_0000) && (i == 1))
-                    {
-                        // if bit 7 is 1, then it's a 7 byte
-                        uidSak.Slice(2, 4).CopyTo(uid.Slice(numberOfUid));
-                        card.NfcId = uid.Slice(0, 4 + numberOfUid).ToArray();
-                        return true;
-                    }
-                    else if (i == 2)
-                    {
-                        // Last case, it's for sure 10 bytes
-                        uidSak.Slice(2, 4).CopyTo(uid.Slice(numberOfUid));
-                        card.NfcId = uid.Slice(0, 4 + numberOfUid).ToArray();
-                        return true;
-                    }
 
                     if (sakInterm[0] != 0x88)
                     {
+                        switch (i)
+                        {
+                            case 0:
+                                // If the bit 3 is 0, then it's only a 4 bytes UID
+                                uidSak.Slice(2, 4).CopyTo(uid);
+                                card.NfcId = uid.Slice(0, 4).ToArray();
+                                return true;
+
+                            case 1:
+                                // if bit 7 is 1, then it's a 7 byte
+                                uidSak.Slice(2, 4).CopyTo(uid.Slice(numberOfUid));
+                                card.NfcId = uid.Slice(0, 4 + numberOfUid).ToArray();
+                                return true;
+
+                            case 2:
+                                // Last case, it's for sure 10 bytes
+                                uidSak.Slice(2, 4).CopyTo(uid.Slice(numberOfUid));
+                                card.NfcId = uid.Slice(0, 4 + numberOfUid).ToArray();
+                                return true;
+                        }
                         return false;
                     }
-
                     sakInterm.Slice(1, 3).CopyTo(uid.Slice(numberOfUid));
                     numberOfUid += 3;
                     CrcReceptionTransfer = false;

@@ -7,6 +7,8 @@ using Iot.Device.Rfid;
 using System;
 using System.Device.Gpio;
 using System.Device.Spi;
+using System.Diagnostics.SymbolStore;
+using System.Linq;
 using System.Threading;
 
 namespace myApp.Drivers.Mifare
@@ -100,6 +102,16 @@ namespace myApp.Drivers.Mifare
 			}
 		}
 
+		public byte[] GetMifareSerialNumber(byte[] NfcId)
+        {
+			byte[] result = new byte[4];
+			if (NfcId.Length >= 4)
+            {
+				Array.Copy(NfcId, 0, result, 0, 4);
+            }
+			return result;
+        }
+
 		public bool Hold { get; set; } = false;
 		private LLCP llcp;
 		public void ScanForISO14443TypeADevices(int scanTimeInMilliseconds)
@@ -137,47 +149,86 @@ namespace myApp.Drivers.Mifare
 					}
 					else
 					{
+
 						// This is where you do something with the card
 						MifareCard mifareCard = new MifareCard(Chip, cardTypeA.TargetNumber);
 						mifareCard.SetCapacity(cardTypeA.Atqa, cardTypeA.Sak);
-						mifareCard.SerialNumber = cardTypeA.NfcId;
+						mifareCard.SerialNumber = GetMifareSerialNumber(cardTypeA.NfcId);
 						mifareCard.KeyA = new byte[6] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 						mifareCard.KeyB = new byte[6] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-						for (byte block = 0; block < 64; block++)
+
+						//http://nfc-tools.org/index.php/ISO14443A
+						if ((cardTypeA.Sak == 0x00) && (cardTypeA.Atqa == 0x0044))
 						{
-							mifareCard.BlockNumber = block;
-							mifareCard.Command = MifareCardCommand.AuthenticationA;
-							int ret = mifareCard.RunMifiCardCommand();
-							if (ret >= 0)
+							// Mifare ultralight
+							// https://www.nxp.com/docs/en/data-sheet/NTAG210_212.pdf
+							// Seems MifareCard is not 100% compatible as Getversion is the same commeand as AuthenticationA
+							// We do need GetVersion to detect the size of the NTAG21X memmory size so we probably better create a new object for hanling NTAG21X Cards
+							// Also password handling etc is done totally different
+							int ret = 0;
+
+							mifareCard.Command = MifareCardCommand.Read16Bytes;
+
+							//note a block is 4 bytes, as we read 16 bytes there are 4 blocks in one read
+							for (byte block = 0; block < 64; block++)
 							{
-								mifareCard.BlockNumber = block;
+								mifareCard.BlockNumber = (byte)(block*4);
 								mifareCard.Command = MifareCardCommand.Read16Bytes;
 								ret = mifareCard.RunMifiCardCommand();
 								if (ret >= 0)
 								{
-									Console.WriteLine($"Block: {block}, Data: {BitConverter.ToString(mifareCard.Data)}");
-									if (block % 4 == 3)
-									{
-										// Check what are the permissions
-										for (byte j = 3; j > 0; j--)
-										{
-											var access = mifareCard.BlockAccess((byte)(block - j), mifareCard.Data);
-											Console.WriteLine($"Block: {block - j}, Access: {access}");
-										}
-										var sector = mifareCard.SectorTailerAccess(block, mifareCard.Data);
-										Console.WriteLine($"Block: {block}, Access: {sector}");
-									}
+									Console.WriteLine($"Block: {block * 4}-{(block * 4) + 3}, Data: {BitConverter.ToString(mifareCard.Data)}");
 								}
 								else
 								{
 									Console.WriteLine($"Error reading block: {block}, Data: {BitConverter.ToString(mifareCard.Data)}");
 								}
 							}
-							else
+
+						} else if ((cardTypeA.Sak == 0x08) && (cardTypeA.Atqa == 0x0004))
+						{
+							//Mifare classic 1k
+							int ret = 0;
+							for (byte block = 0; block < 64; block++)
 							{
-								break;
+								mifareCard.BlockNumber = block;
+								mifareCard.Command = MifareCardCommand.AuthenticationA;
+								ret = mifareCard.RunMifiCardCommand();
+								if (ret >= 0)
+								{
+									mifareCard.BlockNumber = block;
+									mifareCard.Command = MifareCardCommand.Read16Bytes;
+									ret = mifareCard.RunMifiCardCommand();
+									if (ret >= 0)
+									{
+										Console.WriteLine($"Block: {block}, Data: {BitConverter.ToString(mifareCard.Data)}");
+										if (block % 4 == 3)
+										{
+											// Check what are the permissions
+											for (byte j = 3; j > 0; j--)
+											{
+												var access = mifareCard.BlockAccess((byte)(block - j), mifareCard.Data);
+												Console.WriteLine($"Block: {block - j}, Access: {access}");
+											}
+											var sector = mifareCard.SectorTailerAccess(block, mifareCard.Data);
+											Console.WriteLine($"Block: {block}, Access: {sector}");
+										}
+									}
+									else
+									{
+										Console.WriteLine($"Error reading block: {block}, Data: {BitConverter.ToString(mifareCard.Data)}");
+									}
+								}
+								else
+								{
+									break;
+								}
 							}
 						}
+
+
+
+						
 					}
 				}
 			}
